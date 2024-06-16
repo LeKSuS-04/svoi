@@ -28,6 +28,9 @@ func findTriggers(text string) (triggers []position) {
 }
 
 func generateResponseText() string {
+	if rand.IntN(100) == 0 {
+		return "ЛИКВИДИРОВАН"
+	}
 	return "Г" + strings.Repeat("О", 3+rand.IntN(10)) + "Л"
 }
 
