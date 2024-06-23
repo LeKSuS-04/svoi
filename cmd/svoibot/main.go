@@ -22,7 +22,7 @@ func main() {
 
 	bot, err := createBot()
 	if err != nil {
-		logrus.WithError(err).Panicf("Failed to create bot")
+		logrus.WithError(err).Fatalf("Failed to create bot")
 	}
 
 	bot.Run(ctx)
