@@ -13,7 +13,7 @@ import (
 const (
 	svo          string = "сво"
 	zov          string = "зов"
-	likvidirovan string = "ликвидирован"
+	likvidirovan string = "ЛИКВИДИРОВАН"
 )
 
 type trigger struct {
@@ -22,7 +22,6 @@ type trigger struct {
 }
 
 func findTriggers(text string) (triggers []trigger) {
-
 	lowerWords := []string{svo, zov}
 	lowerText := strings.ToLower(text)
 	for i := range len(lowerText) {
@@ -37,7 +36,7 @@ func findTriggers(text string) (triggers []trigger) {
 
 func generateResponseText() string {
 	if rand.IntN(100) == 0 {
-		return strings.ToUpper(likvidirovan)
+		return likvidirovan
 	}
 	return "Г" + strings.Repeat("О", 3+rand.IntN(10)) + "Л"
 }
