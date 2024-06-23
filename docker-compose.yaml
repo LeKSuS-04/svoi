@@ -2,5 +2,9 @@ services:
   bot:
     build: .
     restart: unless-stopped
+    environment:
+      - SQLITE_PATH=/data/svoi.db
     env_file:
       - .envrc
+    volumes:
+      - ./data:/data

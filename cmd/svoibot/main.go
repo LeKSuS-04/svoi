@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	BotTokenEnvKey = "BOT_TOKEN"
-	DebugEnvKey    = "DEBUG"
+	BotTokenEnvKey     = "BOT_TOKEN"
+	DebugEnvKey        = "DEBUG"
+	SqliteDBPathEnvKey = "SQLITE_PATH"
 )
 
 func main() {
@@ -40,6 +41,10 @@ func createBot() (*bot.Bot, error) {
 		logger.Level = logrus.DebugLevel
 	}
 	opts = append(opts, bot.WithLogger(logger))
+
+	if dbPath, ok := os.LookupEnv(SqliteDBPathEnvKey); ok {
+		opts = append(opts, bot.WithDBPath(dbPath))
+	}
 
 	bot, err := bot.NewBot(token, opts...)
 	if err != nil {

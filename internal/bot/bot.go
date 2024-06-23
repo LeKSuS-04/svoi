@@ -12,6 +12,7 @@ type Bot struct {
 	workerCount          int
 	cacheDuration        time.Duration
 	cacheCleanupInterval time.Duration
+	dbPath               string
 
 	api *telego.Bot
 	log *logrus.Logger
@@ -29,6 +30,7 @@ func NewBot(token string, opts ...Option) (*Bot, error) {
 		workerCount:          4,
 		cacheDuration:        time.Hour * 1,
 		cacheCleanupInterval: time.Minute * 5,
+		dbPath:               ":memory:",
 
 		api: api,
 		log: logrus.StandardLogger(),
@@ -61,5 +63,11 @@ func WithCacheDuration(duration time.Duration) Option {
 func WithCacheCleanupInterval(duration time.Duration) Option {
 	return func(b *Bot) {
 		b.cacheCleanupInterval = duration
+	}
+}
+
+func WithDBPath(dbPath string) Option {
+	return func(b *Bot) {
+		b.dbPath = dbPath
 	}
 }

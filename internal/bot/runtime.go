@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/LeKSuS-04/svoi-bot/internal/db"
+	"github.com/LeKSuS-04/svoi-bot/internal/db/q"
 	"github.com/mymmrac/telego"
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
@@ -13,12 +15,18 @@ import (
 type worker struct {
 	api          *telego.Bot
 	messageCache *cache.Cache
+	db           *q.Queries
 	log          *logrus.Entry
 	updates      <-chan telego.Update
 }
 
 func (b *Bot) Run(ctx context.Context) error {
 	b.log.Debug("Running in debug mode")
+
+	db, err := db.New(b.dbPath)
+	if err != nil {
+		return fmt.Errorf("create db: %w", err)
+	}
 
 	messageCache := cache.New(b.cacheDuration, b.cacheCleanupInterval)
 	workerUpdatesChan := make(chan telego.Update, 1000)
@@ -32,6 +40,7 @@ func (b *Bot) Run(ctx context.Context) error {
 			w := worker{
 				api:          b.api,
 				messageCache: messageCache,
+				db:           db,
 				log:          b.log.WithField("worker", workerId),
 				updates:      workerUpdatesChan,
 			}
@@ -79,7 +88,7 @@ loop:
 			break loop
 
 		case update := <-w.updates:
-			err := w.handleUpdate(update, ctx)
+			err := w.handleUpdate(ctx, update)
 			if err != nil {
 				w.log.
 					WithField("updateId", update.UpdateID).
