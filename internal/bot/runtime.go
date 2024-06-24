@@ -47,7 +47,10 @@ func (b *Bot) Run(ctx context.Context) error {
 		}()
 	}
 
-	newUpdatesChan, err := b.api.UpdatesViaLongPolling(nil)
+	newUpdatesChan, err := b.api.UpdatesViaLongPolling(
+		nil,
+		telego.WithLongPollingContext(ctx),
+	)
 	if err != nil {
 		return fmt.Errorf("subscribe to updates: %w", err)
 	}
