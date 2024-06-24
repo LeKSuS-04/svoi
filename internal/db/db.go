@@ -21,7 +21,7 @@ func New(dbPath string) (*q.Queries, error) {
 	if dbPath == InMemory {
 		connectionString = dbPath
 	} else {
-		connectionString = fmt.Sprintf("file://%s?cache=shared&_journal_mode=WAL", dbPath)
+		connectionString = fmt.Sprintf("file://%s?mode=rwc&cache=shared&_journal_mode=WAL", dbPath)
 	}
 
 	db, err := sql.Open("sqlite", connectionString)
