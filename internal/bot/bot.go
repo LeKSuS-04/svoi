@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/LeKSuS-04/svoi-bot/internal/db"
 	"github.com/mymmrac/telego"
 	"github.com/sirupsen/logrus"
 )
@@ -30,7 +31,7 @@ func NewBot(token string, opts ...Option) (*Bot, error) {
 		workerCount:          4,
 		cacheDuration:        time.Hour * 1,
 		cacheCleanupInterval: time.Minute * 5,
-		dbPath:               ":memory:",
+		dbPath:               db.InMemory,
 
 		api: api,
 		log: logrus.StandardLogger(),

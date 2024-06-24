@@ -53,6 +53,34 @@ func generateTriggerResponseMessage(trigger trigger, responseText string, msg *t
 	}
 }
 
+func IsTooManyTriggers(triggerCount int, triggerLength int, textLength int) bool {
+	moreTriggersThan := func(maxTriggersPerMessage int) bool {
+		return triggerCount > maxTriggersPerMessage
+	}
+	toBigTriggerLengthTimes := func(coef float64) bool {
+		return coef*float64(triggerLength) > float64(textLength)
+	}
+
+	switch {
+	case 0 < textLength && textLength <= 10:
+		return moreTriggersThan(1)
+	case 10 < textLength && textLength <= 20:
+		return moreTriggersThan(2)
+	case 20 < textLength && textLength <= 30:
+		return moreTriggersThan(3)
+	case 30 < textLength && textLength <= 50:
+		return toBigTriggerLengthTimes(7)
+	case 50 < textLength && textLength <= 100:
+		return moreTriggersThan(7) && toBigTriggerLengthTimes(10)
+	case 100 < textLength && textLength <= 250:
+		return moreTriggersThan(10) && toBigTriggerLengthTimes(16)
+	case 250 < textLength && textLength <= 1000:
+		return moreTriggersThan(15) && toBigTriggerLengthTimes(33)
+	default:
+		return moreTriggersThan(30) && toBigTriggerLengthTimes(75)
+	}
+}
+
 func (w *worker) handleUpdate(ctx context.Context, update telego.Update) error {
 	switch {
 	case update.Message != nil:
@@ -79,6 +107,26 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 	}
 
 	triggers := findTriggers(msg.Text)
+	totalLength := 0
+	for _, trigger := range triggers {
+		totalLength += len(trigger.word)
+	}
+
+	if IsTooManyTriggers(len(triggers), totalLength, len(msg.Text)) {
+		response := &telego.SendMessageParams{
+			Text:   "Спамер",
+			ChatID: msg.Chat.ChatID(),
+			ReplyParameters: &telego.ReplyParameters{
+				MessageID: msg.MessageID,
+			},
+		}
+		_, err := w.api.SendMessage(response)
+		if err != nil {
+			return fmt.Errorf("send message: %w", err)
+		}
+		return nil
+	}
+
 	for _, trigger := range triggers {
 		switch trigger.word {
 		case svo:

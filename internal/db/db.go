@@ -11,11 +11,20 @@ import (
 	"github.com/LeKSuS-04/svoi-bot/internal/db/q"
 )
 
+const InMemory = ":memory:"
+
 //go:embed schema.sql
 var ddl string
 
 func New(dbPath string) (*q.Queries, error) {
-	db, err := sql.Open("sqlite", dbPath)
+	var connectionString string
+	if dbPath == InMemory {
+		connectionString = dbPath
+	} else {
+		connectionString = fmt.Sprintf("file://%s?cache=shared&_journal_mode=WAL", dbPath)
+	}
+
+	db, err := sql.Open("sqlite", connectionString)
 	if err != nil {
 		return nil, fmt.Errorf("open db file: %w", err)
 	}
