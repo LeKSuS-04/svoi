@@ -41,18 +41,6 @@ func generateResponseText() string {
 	return "Г" + strings.Repeat("О", 3+rand.IntN(10)) + "Л"
 }
 
-func generateTriggerResponseMessage(trigger trigger, responseText string, msg *telego.Message) *telego.SendMessageParams {
-	return &telego.SendMessageParams{
-		Text:   responseText,
-		ChatID: msg.Chat.ChatID(),
-		ReplyParameters: &telego.ReplyParameters{
-			MessageID:     msg.MessageID,
-			Quote:         msg.Text[trigger.start : trigger.start+len(trigger.word)],
-			QuotePosition: trigger.start,
-		},
-	}
-}
-
 func IsTooManyTriggers(triggerCount int, triggersLength int, textLength int) bool {
 	moreTriggersThan := func(maxTriggersPerMessage int) bool {
 		return triggerCount > maxTriggersPerMessage
@@ -112,13 +100,7 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 		totalLength += len(trigger.word)
 	}
 	if IsTooManyTriggers(len(triggers), totalLength, len(msg.Text)) {
-		response := &telego.SendMessageParams{
-			Text:   "Спамер",
-			ChatID: msg.Chat.ChatID(),
-			ReplyParameters: &telego.ReplyParameters{
-				MessageID: msg.MessageID,
-			},
-		}
+		response := simpleReply("Спамер", msg)
 		_, err := w.api.SendMessage(response)
 		if err != nil {
 			return fmt.Errorf("send message: %w", err)
@@ -139,7 +121,7 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 			stats.LikvidirovanCount += 1
 		}
 
-		response := generateTriggerResponseMessage(trigger, responseText, msg)
+		response := replyWithQuote(responseText, trigger, msg)
 		_, err := w.api.SendMessage(response)
 		if err != nil {
 			return fmt.Errorf("send message: %w", err)
@@ -170,17 +152,33 @@ func (w *worker) handleStatsRequest(ctx context.Context, msg *telego.Message) er
 	}
 	responseText := strings.Join(responseLines, "\n\n")
 
-	response := &telego.SendMessageParams{
-		Text:   responseText,
-		ChatID: msg.Chat.ChatID(),
-		ReplyParameters: &telego.ReplyParameters{
-			MessageID: msg.MessageID,
-		},
-	}
+	response := simpleReply(responseText, msg)
 	_, err = w.api.SendMessage(response)
 	if err != nil {
 		return fmt.Errorf("send message: %w", err)
 	}
 
 	return nil
+}
+
+func simpleReply(responseText string, msg *telego.Message) *telego.SendMessageParams {
+	return &telego.SendMessageParams{
+		Text:   responseText,
+		ChatID: msg.Chat.ChatID(),
+		ReplyParameters: &telego.ReplyParameters{
+			MessageID: msg.MessageID,
+		},
+	}
+}
+
+func replyWithQuote(responseText string, trigger trigger, msg *telego.Message) *telego.SendMessageParams {
+	return &telego.SendMessageParams{
+		Text:   responseText,
+		ChatID: msg.Chat.ChatID(),
+		ReplyParameters: &telego.ReplyParameters{
+			MessageID:     msg.MessageID,
+			Quote:         msg.Text[trigger.start : trigger.start+len(trigger.word)],
+			QuotePosition: trigger.start,
+		},
+	}
 }
