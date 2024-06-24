@@ -111,7 +111,6 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 	for _, trigger := range triggers {
 		totalLength += len(trigger.word)
 	}
-
 	if IsTooManyTriggers(len(triggers), totalLength, len(msg.Text)) {
 		response := &telego.SendMessageParams{
 			Text:   "Спамер",
