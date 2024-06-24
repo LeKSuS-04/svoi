@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/LeKSuS-04/svoi-bot/internal/db"
 	"github.com/mymmrac/telego"
@@ -95,17 +96,21 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 	}
 
 	triggers := findTriggers(msg.Text)
-	totalLength := 0
-	for _, trigger := range triggers {
-		totalLength += len(trigger.word)
-	}
-	if IsTooManyTriggers(len(triggers), totalLength, len(msg.Text)) {
-		response := simpleReply("Спамер", msg)
-		_, err := w.api.SendMessage(response)
-		if err != nil {
-			return fmt.Errorf("send message: %w", err)
+	{
+		triggerCount := len(triggers)
+		triggersLength := 0
+		for _, trigger := range triggers {
+			triggersLength += utf8.RuneCountInString(trigger.word)
 		}
-		return nil
+		textLength := utf8.RuneCountInString(msg.Text)
+		if IsTooManyTriggers(triggerCount, triggersLength, textLength) {
+			response := simpleReply("Спамер", msg)
+			_, err := w.api.SendMessage(response)
+			if err != nil {
+				return fmt.Errorf("send message: %w", err)
+			}
+			return nil
+		}
 	}
 
 	for _, trigger := range triggers {

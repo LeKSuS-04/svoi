@@ -16,7 +16,12 @@ const InMemory = ":memory:"
 //go:embed schema.sql
 var ddl string
 
-func New(dbPath string) (*q.Queries, error) {
+type DB struct {
+	*sql.DB
+	*q.Queries
+}
+
+func New(dbPath string) (*DB, error) {
 	var connectionString string
 	if dbPath == InMemory {
 		connectionString = dbPath
@@ -35,5 +40,8 @@ func New(dbPath string) (*q.Queries, error) {
 	}
 
 	queries := q.New(db)
-	return queries, nil
+	return &DB{
+		DB:      db,
+		Queries: queries,
+	}, nil
 }

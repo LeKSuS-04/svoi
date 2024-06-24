@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/LeKSuS-04/svoi-bot/internal/db"
-	"github.com/LeKSuS-04/svoi-bot/internal/db/q"
 	"github.com/mymmrac/telego"
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
@@ -15,7 +14,7 @@ import (
 type worker struct {
 	api          *telego.Bot
 	messageCache *cache.Cache
-	db           *q.Queries
+	db           *db.DB
 	log          *logrus.Entry
 	updates      <-chan telego.Update
 }

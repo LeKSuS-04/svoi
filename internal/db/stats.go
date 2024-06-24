@@ -17,14 +17,20 @@ type NamedStats struct {
 	LikvidirovanCount int
 }
 
-func IncreaseStats(ctx context.Context, queries *q.Queries, stats NamedStats) error {
-	displayedName, err := queries.GetUser(ctx, int64(stats.UserID))
+func IncreaseStats(ctx context.Context, db *DB, stats NamedStats) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	displayedName, err := db.WithTx(tx).GetUser(ctx, int64(stats.UserID))
 	if err != nil && err != sql.ErrNoRows {
 		return fmt.Errorf("get user %d: %w", stats.UserID, err)
 	}
 
 	if err == sql.ErrNoRows {
-		err := queries.CreateUser(ctx, q.CreateUserParams{
+		err := db.WithTx(tx).CreateUser(ctx, q.CreateUserParams{
 			ID:            int64(stats.UserID),
 			DisplayedName: stats.UserDisplayName,
 		})
@@ -32,7 +38,7 @@ func IncreaseStats(ctx context.Context, queries *q.Queries, stats NamedStats) er
 			return fmt.Errorf("create user: %w", err)
 		}
 	} else if displayedName != stats.UserDisplayName {
-		err := queries.UpdateUser(ctx, q.UpdateUserParams{
+		err := db.WithTx(tx).UpdateUser(ctx, q.UpdateUserParams{
 			ID:            int64(stats.UserID),
 			DisplayedName: stats.UserDisplayName,
 		})
@@ -41,7 +47,7 @@ func IncreaseStats(ctx context.Context, queries *q.Queries, stats NamedStats) er
 		}
 	}
 
-	err = queries.InitStat(ctx, q.InitStatParams{
+	err = db.WithTx(tx).InitStat(ctx, q.InitStatParams{
 		UserID: int64(stats.UserID),
 		ChatID: int64(stats.ChatID),
 	})
@@ -49,7 +55,7 @@ func IncreaseStats(ctx context.Context, queries *q.Queries, stats NamedStats) er
 		return fmt.Errorf("init stat: %w", err)
 	}
 
-	err = queries.AddStats(ctx, q.AddStatsParams{
+	err = db.WithTx(tx).AddStats(ctx, q.AddStatsParams{
 		UserID:            int64(stats.UserID),
 		ChatID:            int64(stats.ChatID),
 		SvoCount:          int64(stats.SvoCount),
@@ -60,18 +66,28 @@ func IncreaseStats(ctx context.Context, queries *q.Queries, stats NamedStats) er
 		return fmt.Errorf("add stats: %w", err)
 	}
 
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit changes: %w", err)
+	}
+
 	return nil
 }
 
-func RetrieveStats(ctx context.Context, queries *q.Queries, chatID int) ([]NamedStats, error) {
-	stats, err := queries.GetChatStats(ctx, int64(chatID))
+func RetrieveStats(ctx context.Context, db *DB, chatID int) ([]NamedStats, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	stats, err := db.GetChatStats(ctx, int64(chatID))
 	if err != nil {
 		return nil, fmt.Errorf("get chat stats: %w", err)
 	}
 
 	var namedStats []NamedStats
 	for _, stat := range stats {
-		displayedName, err := queries.GetUser(ctx, stat.UserID)
+		displayedName, err := db.GetUser(ctx, stat.UserID)
 		if err != nil {
 			return nil, fmt.Errorf("get user %d: %w", stat.UserID, err)
 		}
@@ -83,6 +99,10 @@ func RetrieveStats(ctx context.Context, queries *q.Queries, chatID int) ([]Named
 			ZovCount:          int(stat.ZovCount),
 			LikvidirovanCount: int(stat.LikvidirovanCount),
 		})
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit changes: %w", err)
 	}
 
 	return namedStats, nil
