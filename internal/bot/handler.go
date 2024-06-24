@@ -53,12 +53,12 @@ func generateTriggerResponseMessage(trigger trigger, responseText string, msg *t
 	}
 }
 
-func IsTooManyTriggers(triggerCount int, triggerLength int, textLength int) bool {
+func IsTooManyTriggers(triggerCount int, triggersLength int, textLength int) bool {
 	moreTriggersThan := func(maxTriggersPerMessage int) bool {
 		return triggerCount > maxTriggersPerMessage
 	}
-	toBigTriggerLengthTimes := func(coef float64) bool {
-		return coef*float64(triggerLength) > float64(textLength)
+	toBigTriggersLengthTimes := func(coef float64) bool {
+		return coef*float64(triggersLength) > float64(textLength)
 	}
 
 	switch {
@@ -69,15 +69,15 @@ func IsTooManyTriggers(triggerCount int, triggerLength int, textLength int) bool
 	case 20 < textLength && textLength <= 30:
 		return moreTriggersThan(3)
 	case 30 < textLength && textLength <= 50:
-		return toBigTriggerLengthTimes(7)
+		return toBigTriggersLengthTimes(7)
 	case 50 < textLength && textLength <= 100:
-		return moreTriggersThan(7) && toBigTriggerLengthTimes(10)
+		return moreTriggersThan(7) && toBigTriggersLengthTimes(10)
 	case 100 < textLength && textLength <= 250:
-		return moreTriggersThan(10) && toBigTriggerLengthTimes(16)
+		return moreTriggersThan(10) && toBigTriggersLengthTimes(16)
 	case 250 < textLength && textLength <= 1000:
-		return moreTriggersThan(15) && toBigTriggerLengthTimes(33)
+		return moreTriggersThan(15) && toBigTriggersLengthTimes(33)
 	default:
-		return moreTriggersThan(30) && toBigTriggerLengthTimes(75)
+		return moreTriggersThan(30) && toBigTriggersLengthTimes(75)
 	}
 }
 
