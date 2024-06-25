@@ -9,6 +9,7 @@ import (
 
 	"github.com/LeKSuS-04/svoi-bot/internal/db"
 	"github.com/mymmrac/telego"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -58,15 +59,15 @@ func IsTooManyTriggers(triggerCount int, triggersLength int, textLength int) boo
 	case 20 < textLength && textLength <= 30:
 		return moreTriggersThan(3)
 	case 30 < textLength && textLength <= 50:
-		return toBigTriggersLengthTimes(7)
+		return toBigTriggersLengthTimes(2.3)
 	case 50 < textLength && textLength <= 100:
-		return moreTriggersThan(7) && toBigTriggersLengthTimes(10)
+		return moreTriggersThan(7) && toBigTriggersLengthTimes(3.3)
 	case 100 < textLength && textLength <= 250:
-		return moreTriggersThan(10) && toBigTriggersLengthTimes(16)
+		return moreTriggersThan(10) && toBigTriggersLengthTimes(5.3)
 	case 250 < textLength && textLength <= 1000:
-		return moreTriggersThan(15) && toBigTriggersLengthTimes(33)
+		return moreTriggersThan(15) && toBigTriggersLengthTimes(11)
 	default:
-		return moreTriggersThan(30) && toBigTriggersLengthTimes(75)
+		return moreTriggersThan(30) && toBigTriggersLengthTimes(25)
 	}
 }
 
@@ -103,6 +104,11 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 			triggersLength += utf8.RuneCountInString(trigger.word)
 		}
 		textLength := utf8.RuneCountInString(msg.Text)
+		w.log.WithFields(logrus.Fields{
+			"triggerCount":   triggerCount,
+			"triggersLength": triggersLength,
+			"textLength":     textLength,
+		}).Debug("Evaluating spammer status")
 		if IsTooManyTriggers(triggerCount, triggersLength, textLength) {
 			response := simpleReply("Спамер", msg)
 			_, err := w.api.SendMessage(response)
