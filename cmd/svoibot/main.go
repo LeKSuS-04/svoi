@@ -6,8 +6,9 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/LeKSuS-04/svoi-bot/internal/bot"
 	"github.com/sirupsen/logrus"
+
+	"github.com/LeKSuS-04/svoi-bot/internal/bot"
 )
 
 const (

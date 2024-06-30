@@ -2,9 +2,8 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
-
 	_ "embed"
+	"fmt"
 
 	_ "modernc.org/sqlite"
 

@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/LeKSuS-04/svoi-bot/internal/db"
 	"github.com/mymmrac/telego"
 	"github.com/sirupsen/logrus"
+
+	"github.com/LeKSuS-04/svoi-bot/internal/db"
 )
 
 type Bot struct {

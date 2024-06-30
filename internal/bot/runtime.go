@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/LeKSuS-04/svoi-bot/internal/db"
 	"github.com/mymmrac/telego"
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
+
+	"github.com/LeKSuS-04/svoi-bot/internal/db"
 )
 
 type worker struct {
