@@ -7,9 +7,10 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/LeKSuS-04/svoi-bot/internal/db"
 	"github.com/mymmrac/telego"
 	"github.com/sirupsen/logrus"
+
+	"github.com/LeKSuS-04/svoi-bot/internal/db"
 )
 
 const (
@@ -81,7 +82,7 @@ func (w *worker) handleUpdate(ctx context.Context, update telego.Update) error {
 }
 
 func (w *worker) handleMessage(ctx context.Context, msg *telego.Message) error {
-	if msg.Text == "/svoistats" {
+	if strings.HasPrefix(msg.Text, "/svoistats") {
 		return w.handleStatsRequest(ctx, msg)
 	}
 	return w.handleRegularMessage(ctx, msg)
@@ -155,7 +156,7 @@ func (w *worker) handleStatsRequest(ctx context.Context, msg *telego.Message) er
 
 	var responseLines []string
 	for _, stat := range stats {
-		if stat.SvoCount + stat.ZovCount > 0 {
+		if stat.SvoCount+stat.ZovCount > 0 {
 			line := fmt.Sprintf(
 				"%s: %d СВО и %d ЗОВ-ов повлекли за собой %d ЛИКВИДАЦИЙ",
 				stat.UserDisplayName, stat.SvoCount, stat.ZovCount, stat.LikvidirovanCount,
