@@ -33,11 +33,11 @@ type matcher struct {
 var matchers = []matcher{
 	{
 		ttype: svo,
-		re:    regexp.MustCompile("[сС][вВ][оО]+"),
+		re:    regexp.MustCompile("[сСsS][вВvV][оОoO]+"),
 	},
 	{
 		ttype: svo,
-		re:    regexp.MustCompile("[зЗ][оО]+[вВ]"),
+		re:    regexp.MustCompile("[зЗzZ][оОoO]+[вВvV]"),
 	},
 }
 
