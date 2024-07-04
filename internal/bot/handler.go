@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand/v2"
+	"regexp"
 	"strings"
 	"unicode/utf8"
 
@@ -13,35 +14,73 @@ import (
 	"github.com/LeKSuS-04/svoi-bot/internal/db"
 )
 
+type triggerType int
+type responseType int
+
 const (
-	svo          string = "сво"
-	zov          string = "зов"
-	likvidirovan string = "ЛИКВИДИРОВАН"
+	svo triggerType = iota
+	zov triggerType = iota
+
+	gol          responseType = iota
+	likvidirovan responseType = iota
 )
 
+type matcher struct {
+	ttype triggerType
+	re    *regexp.Regexp
+}
+
+var matchers = []matcher{
+	{
+		ttype: svo,
+		re:    regexp.MustCompile("[сС][вВ][оО]+"),
+	},
+	{
+		ttype: svo,
+		re:    regexp.MustCompile("[зЗ][оО]+[вВ]"),
+	},
+}
+
 type trigger struct {
-	start int
-	word  string
+	position int
+	quote    string
+
+	runeLength int
+	ttype      triggerType
+}
+
+type response struct {
+	text  string
+	ttype responseType
 }
 
 func findTriggers(text string) (triggers []trigger) {
-	lowerWords := []string{svo, zov}
-	lowerText := strings.ToLower(text)
-	for i := range len(lowerText) {
-		for _, word := range lowerWords {
-			if i+len(word) <= len(lowerText) && lowerText[i:i+len(word)] == word {
-				triggers = append(triggers, trigger{i, word})
-			}
+	for _, matcher := range matchers {
+		matches := matcher.re.FindAllStringIndex(text, -1)
+		for _, match := range matches {
+			quote := text[match[0]:match[1]]
+			triggers = append(triggers, trigger{
+				quote:      quote,
+				position:   utf8.RuneCountInString(text[:match[0]]),
+				runeLength: utf8.RuneCountInString(quote),
+				ttype:      matcher.ttype,
+			})
 		}
 	}
 	return triggers
 }
 
-func generateResponseText() string {
+func generateResponseText() response {
 	if rand.IntN(100) == 0 {
-		return likvidirovan
+		return response{
+			text:  "ЛИКВИДИРОВАН",
+			ttype: likvidirovan,
+		}
 	}
-	return "Г" + strings.Repeat("О", 3+rand.IntN(10)) + "Л"
+	return response{
+		text:  "Г" + strings.Repeat("О", 3+rand.IntN(10)) + "Л",
+		ttype: gol,
+	}
 }
 
 func IsTooManyTriggers(triggerCount int, triggersLength int, textLength int) bool {
@@ -98,11 +137,12 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 	}
 
 	triggers := findTriggers(msg.Text)
+	w.log.WithField("triggers", triggers).Debug("Found triggers")
 	{
 		triggerCount := len(triggers)
 		triggersLength := 0
 		for _, trigger := range triggers {
-			triggersLength += utf8.RuneCountInString(trigger.word)
+			triggersLength += trigger.runeLength
 		}
 		textLength := utf8.RuneCountInString(msg.Text)
 		w.log.WithFields(logrus.Fields{
@@ -121,7 +161,7 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 	}
 
 	for _, trigger := range triggers {
-		switch trigger.word {
+		switch trigger.ttype {
 		case svo:
 			stats.SvoCount += 1
 		case zov:
@@ -129,11 +169,11 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 		}
 
 		responseText := generateResponseText()
-		if responseText == likvidirovan {
+		if responseText.ttype == likvidirovan {
 			stats.LikvidirovanCount += 1
 		}
 
-		response := replyWithQuote(responseText, trigger, msg)
+		response := replyWithQuote(responseText.text, trigger, msg)
 		_, err := w.api.SendMessage(response)
 		if err != nil {
 			return fmt.Errorf("send message: %w", err)
@@ -191,8 +231,8 @@ func replyWithQuote(responseText string, trigger trigger, msg *telego.Message) *
 		ChatID: msg.Chat.ChatID(),
 		ReplyParameters: &telego.ReplyParameters{
 			MessageID:     msg.MessageID,
-			Quote:         msg.Text[trigger.start : trigger.start+len(trigger.word)],
-			QuotePosition: trigger.start,
+			Quote:         trigger.quote,
+			QuotePosition: trigger.position,
 		},
 	}
 }
