@@ -18,6 +18,10 @@ type NamedStats struct {
 }
 
 func IncreaseStats(ctx context.Context, db *DB, stats NamedStats) error {
+	if stats.UserID == 777000 { // Telegram account
+		return nil
+	}
+
 	tx, err := db.Begin()
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
