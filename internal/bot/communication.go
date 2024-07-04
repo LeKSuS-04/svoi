@@ -29,7 +29,7 @@ var matchers = []matcher{
 		re:    regexp.MustCompile("[сСsS][вВvV][оОoO]+"),
 	},
 	{
-		ttype: svo,
+		ttype: zov,
 		re:    regexp.MustCompile("[зЗzZ][оОoO]+[вВvV]"),
 	},
 }
