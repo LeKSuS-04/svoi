@@ -1,10 +1,13 @@
 package bot
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"regexp"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/LeKSuS-04/svoi-bot/internal/db"
 )
 
 type triggerType int
@@ -102,4 +105,38 @@ func IsTooManyTriggers(triggerCount int, triggersLength int, textLength int) boo
 	default:
 		return moreTriggersThan(30) && toBigTriggersLengthTimes(25)
 	}
+}
+
+func fmtStatsLine(stat db.NamedStats) string {
+	svoStr := "СВО"
+
+	zovStr := func() string {
+		switch stat.ZovCount % 10 {
+		case 1:
+			return "ЗОВ"
+		case 2, 3, 4:
+			return "ЗОВ-а"
+		default:
+			return "ЗОВ-ов"
+		}
+	}()
+
+	likvidirovanStr := func() string {
+		switch stat.LikvidirovanCount {
+		case 1:
+			return "ЛИКВИДАЦИЮ"
+		case 2, 3, 4:
+			return "ЛИКВИДАЦИИ"
+		default:
+			return "ЛИКВИДАЦИЙ"
+		}
+	}()
+
+	return fmt.Sprintf(
+		"%s: %d %s и %d %s повлекли за собой %d %s",
+		stat.UserDisplayName,
+		stat.SvoCount, svoStr,
+		stat.ZovCount, zovStr,
+		stat.LikvidirovanCount, likvidirovanStr,
+	)
 }

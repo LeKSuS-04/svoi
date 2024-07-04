@@ -98,10 +98,7 @@ func (w *worker) handleStatsRequest(ctx context.Context, msg *telego.Message) er
 	var responseLines []string
 	for _, stat := range stats {
 		if stat.SvoCount+stat.ZovCount > 0 {
-			line := fmt.Sprintf(
-				"%s: %d СВО и %d ЗОВ-ов повлекли за собой %d ЛИКВИДАЦИЙ",
-				stat.UserDisplayName, stat.SvoCount, stat.ZovCount, stat.LikvidirovanCount,
-			)
+			line := fmtStatsLine(stat)
 			responseLines = append(responseLines, line)
 		}
 	}
