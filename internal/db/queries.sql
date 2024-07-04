@@ -20,7 +20,7 @@ VALUES (?, ?);
 -- name: GetChatStats :many
 SELECT user_id, svo_count, zov_count, likvidirovan_count
 FROM stats
-WHERE chat_id = ?
+WHERE chat_id = ? AND svo_count + zov_count > 0
 ORDER BY svo_count + zov_count DESC;
 
 -- name: AddStats :exec

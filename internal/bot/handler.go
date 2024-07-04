@@ -97,10 +97,8 @@ func (w *worker) handleStatsRequest(ctx context.Context, msg *telego.Message) er
 
 	var responseLines []string
 	for _, stat := range stats {
-		if stat.SvoCount+stat.ZovCount > 0 {
-			line := fmtStatsLine(stat)
-			responseLines = append(responseLines, line)
-		}
+		line := fmtStatsLine(stat)
+		responseLines = append(responseLines, line)
 	}
 	responseText := strings.Join(responseLines, "\n\n")
 
