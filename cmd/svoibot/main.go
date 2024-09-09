@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -21,7 +22,11 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 
-	bot, err := createBot()
+	var configPath string
+	flag.StringVar(&configPath, "config", "", "Path to config file")
+	flag.Parse()
+
+	bot, err := createBot(configPath)
 	if err != nil {
 		logrus.WithError(err).Fatal("Failed to create bot")
 	}
@@ -32,25 +37,26 @@ func main() {
 	}
 }
 
-func createBot() (*bot.Bot, error) {
-	token, ok := os.LookupEnv(BotTokenEnvKey)
-	if !ok {
-		return nil, fmt.Errorf("no %q in env vars", BotTokenEnvKey)
+func createBot(configPath string) (*bot.Bot, error) {
+	config, err := bot.LoadConfig(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("load config: %w", err)
 	}
+	fmt.Printf("%+v\b", config)
 
 	var opts []bot.Option
 
 	logger := logrus.New()
-	if _, ok := os.LookupEnv(DebugEnvKey); ok {
+	if config.Debug {
 		logger.Level = logrus.DebugLevel
 	}
 	opts = append(opts, bot.WithLogger(logger))
 
-	if dbPath, ok := os.LookupEnv(SqliteDBPathEnvKey); ok {
-		opts = append(opts, bot.WithDBPath(dbPath))
+	if config.SqlitePath != "" {
+		opts = append(opts, bot.WithDBPath(config.SqlitePath))
 	}
 
-	bot, err := bot.NewBot(token, opts...)
+	bot, err := bot.NewBot(config, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("create new bot: %w", err)
 	}

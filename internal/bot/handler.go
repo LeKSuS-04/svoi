@@ -69,15 +69,26 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 			stats.ZovCount += 1
 		}
 
-		responseText := generateResponse()
-		if responseText.ttype == likvidirovan {
+		rsp, err := w.generateResponse()
+		if err != nil {
+			return fmt.Errorf("generate response: %w", err)
+		}
+
+		if rsp.getType() == likvidirovan {
 			stats.LikvidirovanCount += 1
 		}
 
-		response := replyWithQuote(responseText.text, trigger, msg)
-		_, err := w.api.SendMessage(response)
+		err = rsp.reply(
+			w.api,
+			msg.Chat.ChatID(),
+			&telego.ReplyParameters{
+				MessageID:     msg.MessageID,
+				Quote:         trigger.quote,
+				QuotePosition: trigger.position,
+			},
+		)
 		if err != nil {
-			return fmt.Errorf("send message: %w", err)
+			return fmt.Errorf("respond: %w", err)
 		}
 	}
 
@@ -125,10 +136,5 @@ func replyWithQuote(responseText string, trigger trigger, msg *telego.Message) *
 	return &telego.SendMessageParams{
 		Text:   responseText,
 		ChatID: msg.Chat.ChatID(),
-		ReplyParameters: &telego.ReplyParameters{
-			MessageID:     msg.MessageID,
-			Quote:         trigger.quote,
-			QuotePosition: trigger.position,
-		},
 	}
 }

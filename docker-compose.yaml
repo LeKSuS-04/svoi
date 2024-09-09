@@ -6,5 +6,7 @@ services:
       - SQLITE_PATH=/data/svoi.db
     env_file:
       - .envrc
+    command: "-config /config.yaml"
     volumes:
       - ./data:/data
+      - ./config/config.yaml:/config.yaml:ro

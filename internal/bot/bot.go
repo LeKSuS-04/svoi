@@ -11,6 +11,7 @@ import (
 )
 
 type Bot struct {
+	config               *Config
 	workerCount          int
 	cacheDuration        time.Duration
 	cacheCleanupInterval time.Duration
@@ -22,13 +23,14 @@ type Bot struct {
 
 type Option = func(*Bot)
 
-func NewBot(token string, opts ...Option) (*Bot, error) {
-	api, err := telego.NewBot(token)
+func NewBot(config *Config, opts ...Option) (*Bot, error) {
+	api, err := telego.NewBot(config.BotToken)
 	if err != nil {
 		return nil, fmt.Errorf("create new bot api: %w", err)
 	}
 
 	b := &Bot{
+		config:               config,
 		workerCount:          4,
 		cacheDuration:        time.Hour * 1,
 		cacheCleanupInterval: time.Minute * 5,

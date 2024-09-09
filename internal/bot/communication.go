@@ -2,9 +2,7 @@ package bot
 
 import (
 	"fmt"
-	"math/rand/v2"
 	"regexp"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/LeKSuS-04/svoi-bot/internal/db"
@@ -16,9 +14,6 @@ type responseType int
 const (
 	svo triggerType = iota
 	zov triggerType = iota
-
-	gol          responseType = iota
-	likvidirovan responseType = iota
 )
 
 type matcher struct {
@@ -45,11 +40,6 @@ type trigger struct {
 	ttype      triggerType
 }
 
-type response struct {
-	text  string
-	ttype responseType
-}
-
 func findTriggers(text string) (triggers []trigger) {
 	for _, matcher := range matchers {
 		matches := matcher.re.FindAllStringIndex(text, -1)
@@ -64,19 +54,6 @@ func findTriggers(text string) (triggers []trigger) {
 		}
 	}
 	return triggers
-}
-
-func generateResponse() response {
-	if rand.IntN(100) == 0 {
-		return response{
-			text:  "ЛИКВИДИРОВАН",
-			ttype: likvidirovan,
-		}
-	}
-	return response{
-		text:  "Г" + strings.Repeat("О", 3+rand.IntN(10)) + "Л",
-		ttype: gol,
-	}
 }
 
 func IsTooManyTriggers(triggerCount int, triggersLength int, textLength int) bool {
