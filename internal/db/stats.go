@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/LeKSuS-04/svoi-bot/internal/db/q"
@@ -26,14 +27,16 @@ func IncreaseStats(ctx context.Context, db *DB, stats NamedStats) error {
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	displayedName, err := db.WithTx(tx).GetUser(ctx, int64(stats.UserID))
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("get user %d: %w", stats.UserID, err)
 	}
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		err := db.WithTx(tx).CreateUser(ctx, q.CreateUserParams{
 			ID:            int64(stats.UserID),
 			DisplayedName: stats.UserDisplayName,
@@ -82,14 +85,16 @@ func RetrieveStats(ctx context.Context, db *DB, chatID int) ([]NamedStats, error
 	if err != nil {
 		return nil, fmt.Errorf("begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	stats, err := db.GetChatStats(ctx, int64(chatID))
 	if err != nil {
 		return nil, fmt.Errorf("get chat stats: %w", err)
 	}
 
-	var namedStats []NamedStats
+	namedStats := make([]NamedStats, 0, len(stats))
 	for _, stat := range stats {
 		displayedName, err := db.GetUser(ctx, stat.UserID)
 		if err != nil {

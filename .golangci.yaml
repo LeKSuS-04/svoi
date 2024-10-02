@@ -1,0 +1,45 @@
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - asciicheck
+    - contextcheck
+    - dupl
+    - dupword
+    - errname
+    - errorlint
+    - fatcontext
+    - goconst
+    - godot
+    - gci
+    - loggercheck
+    - misspell
+    - nestif
+    - prealloc
+    - predeclared
+    - protogetter
+    - tagliatelle
+    - unconvert
+    - usestdlibvars
+    - wastedassign
+    - whitespace
+
+linters-settings:
+  tagliatelle:
+    case:
+      use-field-name: false
+      rules:
+        json: snake
+        yaml: snake
+  predeclared:
+    ignore: "real"
+    q: false
+  gci:
+    sections:
+      - standard
+      - default
+      - localmodule

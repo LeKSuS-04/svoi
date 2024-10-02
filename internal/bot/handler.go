@@ -106,7 +106,7 @@ func (w *worker) handleStatsRequest(ctx context.Context, msg *telego.Message) er
 		return fmt.Errorf("get chat stats: %w", err)
 	}
 
-	var responseLines []string
+	responseLines := make([]string, 0, len(stats))
 	for _, stat := range stats {
 		line := fmtStatsLine(stat)
 		responseLines = append(responseLines, line)
@@ -129,12 +129,5 @@ func simpleReply(responseText string, msg *telego.Message) *telego.SendMessagePa
 		ReplyParameters: &telego.ReplyParameters{
 			MessageID: msg.MessageID,
 		},
-	}
-}
-
-func replyWithQuote(responseText string, trigger trigger, msg *telego.Message) *telego.SendMessageParams {
-	return &telego.SendMessageParams{
-		Text:   responseText,
-		ChatID: msg.Chat.ChatID(),
 	}
 }
