@@ -4,7 +4,8 @@ services:
     image: ghcr.io/svoi-bot/svoi-bot:latest
     restart: unless-stopped
     environment:
-      - SQLITE_PATH=/data/svoi.db
+      SQLITE_PATH: /data/svoi.db
+      BOT_TOKEN: ${BOT_TOKEN}
     env_file:
       - .envrc
     command: "-config /config.yaml"
