@@ -55,6 +55,6 @@ jobs:
           script: |
             cd ${{ secrets.DEPLOYMENT_SERVER_PATH }}
             git pull
-            docker compose pull "$IMAGE_REPO_PATH@$IMAGE_TAG"
+            docker compose pull
             docker compose down -t 10 || true
             docker compose up -d
