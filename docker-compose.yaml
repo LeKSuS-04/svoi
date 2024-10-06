@@ -1,6 +1,7 @@
 services:
   bot:
     build: .
+    image: ghcr.io/svoi-bot/svoi-bot:latest
     restart: unless-stopped
     environment:
       - SQLITE_PATH=/data/svoi.db
