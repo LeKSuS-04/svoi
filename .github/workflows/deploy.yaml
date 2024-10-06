@@ -3,10 +3,15 @@ name: Build docker image and publish it to github container registry
 on:
   workflow_dispatch: {}
 
+env:
+  IMAGE_REPO_PATH: ghcr.io/leksus-04/svoi-bot
+
 jobs:
   publish_package:
     name: Publish package
     runs-on: ubuntu-latest
+    outputs:
+        image_id: ${{ steps.push.outputs.imageid }}
     permissions:
       packages: write
       contents: read
@@ -29,26 +34,27 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/leksus-04/svoi-bot:latest
+          tags: ${{ env.IMAGE_REPO_PATH }}:latest
 
   deploy:
     name: Deploy
-    needs: [publish_package]
+    needs: publish_package
     runs-on: ubuntu-latest
     steps:
       - name: SSH into remote server and update running container
         uses: appleboy/ssh-action@v1.1.0
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_API_TOKEN }}
+          IMAGE_TAG: ${{ needs.publish_package.outputs.image_id }}
         with:
           host: ${{ secrets.DEPLOYMENT_SERVER_ADDRESS }}
           username: ${{ secrets.DEPLOYMENT_SERVER_USER }}
           key: ${{ secrets.DEPLOYMENT_SERVER_SSH_KEY }}
           port: ${{ secrets.DEPLOYMENT_SERVER_SSH_PORT }}
-          envs: BOT_TOKEN
+          envs: BOT_TOKEN,IMAGE_TAG,IMAGE_REPO_PATH
           script: |
             cd ${{ secrets.DEPLOYMENT_SERVER_PATH }}
             git pull
-            docker compose pull
+            docker compose pull "$IMAGE_REPO_PATH@$IMAGE_TAG"
             docker compose down -t 10 || true
             docker compose up -d
