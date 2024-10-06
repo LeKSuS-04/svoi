@@ -1,7 +1,7 @@
 services:
   bot:
     build: .
-    image: ${IMAGE_REPO_PATH:-ghcr.io/svoi-bot/svoi-bot}:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REPO_PATH:-ghcr.io/svoi-bot/svoi-bot}@${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       SQLITE_PATH: /data/svoi.db
