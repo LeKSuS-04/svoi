@@ -45,13 +45,13 @@ jobs:
         uses: appleboy/ssh-action@v1.1.0
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_API_TOKEN }}
-          IMAGE_TAG: ${{ needs.publish_package.outputs.image_id }}
+          IMAGE: ${{ env.IMAGE_REPO_PATH }}@${{ needs.publish_package.outputs.image_id }}
         with:
           host: ${{ secrets.DEPLOYMENT_SERVER_ADDRESS }}
           username: ${{ secrets.DEPLOYMENT_SERVER_USER }}
           key: ${{ secrets.DEPLOYMENT_SERVER_SSH_KEY }}
           port: ${{ secrets.DEPLOYMENT_SERVER_SSH_PORT }}
-          envs: BOT_TOKEN,IMAGE_TAG,IMAGE_REPO_PATH
+          envs: BOT_TOKEN,IMAGE
           script: |
             cd ${{ secrets.DEPLOYMENT_SERVER_PATH }}
             git pull
