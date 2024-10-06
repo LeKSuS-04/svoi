@@ -4,8 +4,11 @@ on:
   workflow_dispatch: {}
 
 jobs:
-  build_docker:
+  publish_package:
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
