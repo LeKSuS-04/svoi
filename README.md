@@ -1,6 +1,15 @@
-# Svoi
+<div align="center">
+  <h1>svoi_bot</h1>
+  <p>
+    <strong>Funny bot for telegram chats</strong>
+  </p>
+  <p>
 
-Funny bot for telegram chats.
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/LeKSuS-04/svoi)
+[![Link to chat with bot](https://img.shields.io/badge/Telegram-bot-blue?logo=telegram)](https://t.me/svoooo_bot)
+
+  </p>
+</div>
 
 > [!IMPORTANT]
 > This bot does not represent any political views of the author or any associated with him people. It is created purely for entertainment purposes.
