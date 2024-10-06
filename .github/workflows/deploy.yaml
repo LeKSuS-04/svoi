@@ -5,6 +5,7 @@ on:
 
 jobs:
   publish_package:
+    name: Publish package
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -32,6 +33,7 @@ jobs:
 
   deploy:
     name: Deploy
+    needs: [publish_package]
     runs-on: ubuntu-latest
     steps:
       - name: SSH into remote server and update running container
