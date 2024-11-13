@@ -1,4 +1,7 @@
 sticker_sets:
   - name: "SVOMonions"
     exclude_sticker_ids:
-      - "AAMCAgADGQEAAS2ahWbfNfdDWYxMYj6pNvWeOunHS5odAAJKTgAC1kZASlnZzM5PZ0DoAQAHbQADNgQ"
+      - "AAMCAgADGQEAAS9VuWc0jrYE1AAB_glDF-WLgGpCaCgCiQACSk4AAtZGQEpZ2czOT2dA6AEAB20AAzYE"
+  - name: "GOYDAAAAAAAAAAAAAAAAAAAA"
+    exclude_sticker_ids:
+      - "AAMCAgADGQEAAS9VxWc0jvTwlMB5es__NRxgLoR4ScRhAAI7SgACTPqgSZS4EcbGdcqUAQAHbQADNgQ"
