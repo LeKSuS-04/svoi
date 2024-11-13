@@ -1,4 +1,4 @@
-name: Build docker image and publish it to github container registry
+name: Build docker image, publish it to github container registry and deploy to prod
 
 on:
   workflow_dispatch: {}
