@@ -92,7 +92,7 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 		}
 	}
 
-	err := db.IncreaseStats(ctx, w.db, stats)
+	err := db.IncreaseStats(ctx, w.connector, stats)
 	if err != nil {
 		return fmt.Errorf("update stats: %w", err)
 	}
@@ -101,7 +101,7 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 }
 
 func (w *worker) handleStatsRequest(ctx context.Context, msg *telego.Message) error {
-	stats, err := db.RetrieveStats(ctx, w.db, int(msg.Chat.ID))
+	stats, err := db.RetrieveStats(ctx, w.connector, int(msg.Chat.ID))
 	if err != nil {
 		return fmt.Errorf("get chat stats: %w", err)
 	}

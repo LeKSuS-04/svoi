@@ -13,21 +13,16 @@ import (
 )
 
 type worker struct {
-	config  *Config
-	api     *telego.Bot
-	cache   *cache.Cache
-	db      *db.DB
-	log     *logrus.Entry
-	updates <-chan telego.Update
+	config    *Config
+	api       *telego.Bot
+	cache     *cache.Cache
+	connector db.Connector
+	log       *logrus.Entry
+	updates   <-chan telego.Update
 }
 
 func (b *Bot) Run(ctx context.Context) error {
 	b.log.Debug("Running in debug mode")
-
-	db, err := db.New(b.dbPath)
-	if err != nil {
-		return fmt.Errorf("create db: %w", err)
-	}
 
 	cache := cache.New(b.cacheDuration, b.cacheCleanupInterval)
 	workerUpdatesChan := make(chan telego.Update, 1000)
@@ -39,12 +34,12 @@ func (b *Bot) Run(ctx context.Context) error {
 		go func() {
 			defer wg.Done()
 			w := worker{
-				config:  b.config,
-				api:     b.api,
-				cache:   cache,
-				db:      db,
-				log:     b.log.WithField("worker", workerId),
-				updates: workerUpdatesChan,
+				config:    b.config,
+				api:       b.api,
+				cache:     cache,
+				connector: &db.SimpleConnector{DbPath: b.dbPath},
+				log:       b.log.WithField("worker", workerId),
+				updates:   workerUpdatesChan,
 			}
 			w.Work(ctx)
 		}()

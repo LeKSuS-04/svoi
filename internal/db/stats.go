@@ -18,7 +18,12 @@ type NamedStats struct {
 	LikvidirovanCount int
 }
 
-func IncreaseStats(ctx context.Context, db *DB, stats NamedStats) error {
+func IncreaseStats(ctx context.Context, connector Connector, stats NamedStats) error {
+	db, err := connector.Connect()
+	if err != nil {
+		return fmt.Errorf("connect to db: %w", err)
+	}
+
 	if stats.UserID == 777000 { // Telegram account
 		return nil
 	}
@@ -80,7 +85,12 @@ func IncreaseStats(ctx context.Context, db *DB, stats NamedStats) error {
 	return nil
 }
 
-func RetrieveStats(ctx context.Context, db *DB, chatID int) ([]NamedStats, error) {
+func RetrieveStats(ctx context.Context, connector Connector, chatID int) ([]NamedStats, error) {
+	db, err := connector.Connect()
+	if err != nil {
+		return nil, fmt.Errorf("connect to db: %w", err)
+	}
+
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("begin transaction: %w", err)
