@@ -6,3 +6,6 @@ sticker_sets:
     exclude_sticker_ids:
       - "AAMCAgADGQEAAS9VxWc0jvTwlMB5es__NRxgLoR4ScRhAAI7SgACTPqgSZS4EcbGdcqUAQAHbQADNgQ"
       - "AAMCAgADGQEAAS_N92dTNle7HLC5fjfsbE4EY0Nl4Ed5AAIfRQACvxahSVYGPGFUUD6gAQAHbQADNgQ"
+
+admin_ids:
+  - 816878939

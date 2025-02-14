@@ -44,3 +44,20 @@ func (w *worker) loadStickerSet(stickerSetConfig StickerSetConfig) (stickerFileI
 	}
 	return stickerFileIDs, nil
 }
+
+const selfUsernameKey = "self_username"
+
+func (w *worker) getSelfUsername() (string, error) {
+	username, ok := w.cache.Get(selfUsernameKey)
+	if ok {
+		return username.(string), nil
+	}
+
+	self, err := w.api.GetMe()
+	if err != nil {
+		return "", fmt.Errorf("get self: %w", err)
+	}
+
+	w.cache.Set(selfUsernameKey, self.Username, -1)
+	return self.Username, nil
+}

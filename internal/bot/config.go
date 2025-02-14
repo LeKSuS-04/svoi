@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/sethvargo/go-envconfig"
 	"gopkg.in/yaml.v3"
@@ -19,6 +20,7 @@ type Config struct {
 	BotToken    string             `env:"BOT_TOKEN"`
 	SqlitePath  string             `yaml:"sqlite_path" env:"SQLITE_PATH"`
 	StickerSets []StickerSetConfig `yaml:"sticker_sets"`
+	AdminIDs    []int64            `yaml:"admin_ids"`
 }
 
 func LoadConfig(path string) (*Config, error) {
@@ -37,4 +39,8 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	return config, nil
+}
+
+func (c *Config) IsAdmin(id int64) bool {
+	return slices.Contains(c.AdminIDs, id)
 }

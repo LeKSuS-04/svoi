@@ -31,3 +31,7 @@ SET
     likvidirovan_count = likvidirovan_count + ?
 WHERE
     user_id = ? AND chat_id = ?;
+
+-- name: GetAllChats :many
+SELECT DISTINCT chat_id
+FROM stats;

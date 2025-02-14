@@ -11,7 +11,7 @@ jobs:
     name: Publish package
     runs-on: ubuntu-latest
     outputs:
-        image_id: ${{ steps.push.outputs.imageid }}
+      image_id: ${{ steps.push.outputs.imageid }}
     permissions:
       packages: write
       contents: read

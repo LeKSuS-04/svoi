@@ -22,9 +22,34 @@ func (w *worker) handleUpdate(ctx context.Context, update telego.Update) error {
 }
 
 func (w *worker) handleMessage(ctx context.Context, msg *telego.Message) error {
-	if strings.HasPrefix(msg.Text, "/svoistats") {
-		return w.handleStatsRequest(ctx, msg)
+	username, err := w.getSelfUsername()
+	if err != nil {
+		return fmt.Errorf("get self username: %w", err)
 	}
+
+	commands := []Command{
+		{
+			Name:    "svoistats",
+			Handler: w.handleStatsRequest,
+		},
+		{
+			Name:    "pwd",
+			Handler: w.handlePwdRequest,
+		},
+		{
+			Name:      "broadcast",
+			Handler:   w.handleBroadcastRequest,
+			AdminOnly: true,
+		},
+	}
+
+	for _, command := range commands {
+		if command.Called(msg, username) {
+			w.log.WithField("command", "/"+command.Name).Debug("Running command")
+			return w.RunCommand(ctx, command, msg)
+		}
+	}
+
 	return w.handleRegularMessage(ctx, msg)
 }
 
@@ -95,28 +120,6 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 	err := db.IncreaseStats(ctx, w.connector, stats)
 	if err != nil {
 		return fmt.Errorf("update stats: %w", err)
-	}
-
-	return nil
-}
-
-func (w *worker) handleStatsRequest(ctx context.Context, msg *telego.Message) error {
-	stats, err := db.RetrieveStats(ctx, w.connector, int(msg.Chat.ID))
-	if err != nil {
-		return fmt.Errorf("get chat stats: %w", err)
-	}
-
-	responseLines := make([]string, 0, len(stats))
-	for _, stat := range stats {
-		line := fmtStatsLine(stat)
-		responseLines = append(responseLines, line)
-	}
-	responseText := strings.Join(responseLines, "\n\n")
-
-	response := simpleReply(responseText, msg)
-	_, err = w.api.SendMessage(response)
-	if err != nil {
-		return fmt.Errorf("send message: %w", err)
 	}
 
 	return nil
