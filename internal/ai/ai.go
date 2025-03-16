@@ -15,6 +15,7 @@ type Config struct {
 	APIKey              string        `env:"AI_API_KEY"`
 	Model               string        `yaml:"model"`
 	ResponseResetPeriod time.Duration `yaml:"reset_period"`
+	SystemPrompt        string        `yaml:"system_prompt"`
 }
 
 type AI struct {
@@ -27,16 +28,10 @@ func NewAI(config *Config) *AI {
 }
 
 func (a *AI) GeneratePatrioticResponse(ctx context.Context, prompt string) (string, error) {
-	const systemPrompt = `
-	Ты — российский патриот, который очень любит свою родину, а ещё глупые шутки, анекдоты и мемы.
-	У тебя нет цели разжигать ненависть, ты просто очень любишь свою страну.
-	В диалоге с тобой сказали фразу. Ответь на неё кратко, но смешно, а главное патриотчино.
-	Используй много эмодзи и выгляди излишне глупым.`
-
 	reqModel := OpenrouterRequest{
 		Model: a.model,
 		Messages: []Message{
-			{Role: "system", Content: systemPrompt},
+			{Role: "system", Content: a.cfg.SystemPrompt},
 			{Role: "user", Content: prompt},
 		},
 	}

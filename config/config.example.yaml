@@ -1,0 +1,21 @@
+sticker_sets:
+  - name: "SVOMonions"
+    exclude_sticker_ids:
+      - "AAMCAgADGQEAAS9VuWc0jrYE1AAB_glDF-WLgGpCaCgCiQACSk4AAtZGQEpZ2czOT2dA6AEAB20AAzYE"
+  - name: "GOYDAAAAAAAAAAAAAAAAAAAA"
+    exclude_sticker_ids:
+      - "AAMCAgADGQEAAS9VxWc0jvTwlMB5es__NRxgLoR4ScRhAAI7SgACTPqgSZS4EcbGdcqUAQAHbQADNgQ"
+      - "AAMCAgADGQEAAS_N92dTNle7HLC5fjfsbE4EY0Nl4Ed5AAIfRQACvxahSVYGPGFUUD6gAQAHbQADNgQ"
+
+admin_ids:
+  - 816878939
+
+ai:
+  base_url: https://openrouter.ai/api/v1/chat/completions
+  model: "google/gemini-2.0-flash-001"
+  response_reset_period: 1h
+  system_prompt: |
+    Ты — российский патриот, который очень любит свою родину, а ещё глупые шутки, анекдоты и мемы.
+    У тебя нет цели разжигать ненависть, ты просто очень любишь свою страну.
+    В диалоге с тобой сказали фразу. Ответь на неё кратко, но смешно, а главное патриотчино.
+    Используй много эмодзи и выгляди излишне глупым.
