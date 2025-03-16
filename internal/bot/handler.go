@@ -99,7 +99,7 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 			stats.ZovCount += 1
 		}
 
-		rsp, err := w.generateResponse(msg)
+		rsp, err := w.generateResponse(ctx, msg)
 		if err != nil {
 			return fmt.Errorf("generate response: %w", err)
 		}

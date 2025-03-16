@@ -6,9 +6,10 @@ import (
 	"os"
 	"slices"
 
-	"github.com/LeKSuS-04/svoi-bot/internal/ai"
 	"github.com/sethvargo/go-envconfig"
 	"gopkg.in/yaml.v3"
+
+	"github.com/LeKSuS-04/svoi-bot/internal/ai"
 )
 
 type StickerSetConfig struct {

@@ -61,7 +61,7 @@ func isAIRespondable(msg string) bool {
 	return normalWordCount >= 5 && patternCount <= 2 && containsPatternCount <= 2
 }
 
-func (w *worker) generateResponse(msg *telego.Message) (response, error) {
+func (w *worker) generateResponse(ctx context.Context, msg *telego.Message) (response, error) {
 	rng := rand.IntN(100)
 
 	aiResponseThreshold := 60
@@ -91,7 +91,7 @@ func (w *worker) generateResponse(msg *telego.Message) (response, error) {
 	case rng >= aiResponseThreshold && isAIRespondable(msg.Text):
 		log := w.log.WithField("sender_id", msg.From.ID)
 		log.WithField("text", msg.Text).Info("Generating patriotic response")
-		resp, err := w.ai.GeneratePatrioticResponse(context.Background(), msg.Text)
+		resp, err := w.ai.GeneratePatrioticResponse(ctx, msg.Text)
 		if err != nil {
 			return nil, fmt.Errorf("generate patriotic response: %w", err)
 		}
