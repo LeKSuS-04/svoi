@@ -50,7 +50,7 @@ func createBot(configPath string) (*bot.Bot, error) {
 	if config.Debug {
 		logger.Level = logrus.DebugLevel
 	}
-	opts = append(opts, bot.WithLogger(logger))
+	opts = append(opts, bot.WithLogger(logger), bot.WithWorkerCount(16))
 
 	if config.SqlitePath != "" {
 		opts = append(opts, bot.WithDBPath(config.SqlitePath))

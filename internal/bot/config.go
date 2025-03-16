@@ -6,6 +6,7 @@ import (
 	"os"
 	"slices"
 
+	"github.com/LeKSuS-04/svoi-bot/internal/ai"
 	"github.com/sethvargo/go-envconfig"
 	"gopkg.in/yaml.v3"
 )
@@ -21,6 +22,7 @@ type Config struct {
 	SqlitePath  string             `yaml:"sqlite_path" env:"SQLITE_PATH"`
 	StickerSets []StickerSetConfig `yaml:"sticker_sets"`
 	AdminIDs    []int64            `yaml:"admin_ids"`
+	AI          *ai.Config         `yaml:"ai"`
 }
 
 func LoadConfig(path string) (*Config, error) {

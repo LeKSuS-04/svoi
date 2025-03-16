@@ -6,6 +6,7 @@ services:
     environment:
       SQLITE_PATH: /data/svoi.db
       BOT_TOKEN: ${BOT_TOKEN}
+      AI_API_KEY: ${AI_API_KEY}
     env_file:
       - .envrc
     command: "-config /config.yaml"

@@ -9,6 +9,7 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 
+	"github.com/LeKSuS-04/svoi-bot/internal/ai"
 	"github.com/LeKSuS-04/svoi-bot/internal/db"
 )
 
@@ -17,6 +18,7 @@ type worker struct {
 	api       *telego.Bot
 	cache     *cache.Cache
 	connector db.Connector
+	ai        *ai.AI
 	log       *logrus.Entry
 	updates   <-chan telego.Update
 }
@@ -26,6 +28,13 @@ func (b *Bot) Run(ctx context.Context) error {
 
 	cache := cache.New(b.cacheDuration, b.cacheCleanupInterval)
 	workerUpdatesChan := make(chan telego.Update, 1000)
+
+	var aiHandler *ai.AI
+	if b.config.AI.APIKey == "" {
+		b.log.Warn("AI API key is not set, AI responses will be disabled")
+	} else {
+		aiHandler = ai.NewAI(b.config.AI)
+	}
 
 	wg := sync.WaitGroup{}
 	wg.Add(b.workerCount)
@@ -38,6 +47,7 @@ func (b *Bot) Run(ctx context.Context) error {
 				api:       b.api,
 				cache:     cache,
 				connector: &db.SimpleConnector{DbPath: b.dbPath},
+				ai:        aiHandler,
 				log:       b.log.WithField("worker", workerId),
 				updates:   workerUpdatesChan,
 			}

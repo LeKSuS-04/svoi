@@ -86,7 +86,12 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 		}
 	}
 
-	for _, trigger := range triggers {
+	type reply struct {
+		response response
+		trigger  trigger
+	}
+	replies := make([]reply, len(triggers))
+	for i, trigger := range triggers {
 		switch trigger.ttype {
 		case svo:
 			stats.SvoCount += 1
@@ -94,22 +99,38 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 			stats.ZovCount += 1
 		}
 
-		rsp, err := w.generateResponse()
+		rsp, err := w.generateResponse(msg)
 		if err != nil {
 			return fmt.Errorf("generate response: %w", err)
 		}
 
-		if rsp.getType() == likvidirovan {
+		// Only answer with AI-generated responses
+		if rsp.getType() == aiGenerated {
+			replies = []reply{{
+				response: rsp,
+				trigger:  trigger,
+			}}
+			break
+		}
+
+		replies[i] = reply{
+			response: rsp,
+			trigger:  trigger,
+		}
+	}
+
+	for _, r := range replies {
+		if r.response.getType() == likvidirovan {
 			stats.LikvidirovanCount += 1
 		}
 
-		err = rsp.reply(
+		err := r.response.reply(
 			w.api,
 			msg.Chat.ChatID(),
 			&telego.ReplyParameters{
 				MessageID:     msg.MessageID,
-				Quote:         trigger.quote,
-				QuotePosition: trigger.position,
+				Quote:         r.trigger.quote,
+				QuotePosition: r.trigger.position,
 			},
 		)
 		if err != nil {

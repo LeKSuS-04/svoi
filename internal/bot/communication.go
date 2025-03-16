@@ -21,14 +21,17 @@ type matcher struct {
 	re    *regexp.Regexp
 }
 
+const svoRegexp = "[сСsS][вВvV][оОoO]+"
+const zovRegexp = "[зЗzZ][оОoO]+[вВvV]"
+
 var matchers = []matcher{
 	{
 		ttype: svo,
-		re:    regexp.MustCompile("[сСsS][вВvV][оОoO]+"),
+		re:    regexp.MustCompile(svoRegexp),
 	},
 	{
 		ttype: zov,
-		re:    regexp.MustCompile("[зЗzZ][оОoO]+[вВvV]"),
+		re:    regexp.MustCompile(zovRegexp),
 	},
 }
 

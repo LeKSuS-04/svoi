@@ -51,7 +51,7 @@ jobs:
           username: ${{ secrets.DEPLOYMENT_SERVER_USER }}
           key: ${{ secrets.DEPLOYMENT_SERVER_SSH_KEY }}
           port: ${{ secrets.DEPLOYMENT_SERVER_SSH_PORT }}
-          envs: BOT_TOKEN,IMAGE
+          envs: BOT_TOKEN,IMAGE,AI_API_KEY
           script: |
             cd ${{ secrets.DEPLOYMENT_SERVER_PATH }}
             git pull
