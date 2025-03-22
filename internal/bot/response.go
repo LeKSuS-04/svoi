@@ -15,9 +15,9 @@ func aiSenderKey(senderID int64) string {
 }
 
 const (
-	regular      responseType = iota
-	likvidirovan responseType = iota
-	aiGenerated  responseType = iota
+	regular      responseType = "regular"
+	likvidirovan responseType = "likvidirovan"
+	aiGenerated  responseType = "ai_generated"
 )
 
 type response interface {

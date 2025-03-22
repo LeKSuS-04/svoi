@@ -35,3 +35,9 @@ WHERE
 -- name: GetAllChats :many
 SELECT DISTINCT chat_id
 FROM stats;
+
+-- name: GetStats :one
+SELECT
+    COUNT(DISTINCT user_id) as total_users,
+    COUNT(DISTINCT chat_id) as total_chats
+FROM stats;

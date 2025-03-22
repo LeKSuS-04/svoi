@@ -48,8 +48,11 @@ func (b *Bot) Run(ctx context.Context) error {
 				cache:     cache,
 				connector: &db.SimpleConnector{DbPath: b.dbPath},
 				ai:        aiHandler,
-				log:       b.log.WithField("worker", workerId),
-				updates:   workerUpdatesChan,
+				log: b.log.WithFields(logrus.Fields{
+					"component": "worker",
+					"workerID":  workerId,
+				}),
+				updates: workerUpdatesChan,
 			}
 			w.Work(ctx)
 		}()
@@ -66,6 +69,10 @@ func (b *Bot) Run(ctx context.Context) error {
 	self, err := b.api.GetMe()
 	if err != nil {
 		return fmt.Errorf("get self: %w", err)
+	}
+
+	if b.config.Metrics != nil && b.config.Metrics.Addr != "" {
+		b.runMetricsServer(ctx)
 	}
 
 	b.log.Infof("Listening for updates from bot %q", self.Username)

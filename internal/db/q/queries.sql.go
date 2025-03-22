@@ -123,6 +123,25 @@ func (q *Queries) GetChatStats(ctx context.Context, chatID int64) ([]GetChatStat
 	return items, nil
 }
 
+const getStats = `-- name: GetStats :one
+SELECT
+    COUNT(DISTINCT user_id) as total_users,
+    COUNT(DISTINCT chat_id) as total_chats
+FROM stats
+`
+
+type GetStatsRow struct {
+	TotalUsers int64
+	TotalChats int64
+}
+
+func (q *Queries) GetStats(ctx context.Context) (GetStatsRow, error) {
+	row := q.db.QueryRowContext(ctx, getStats)
+	var i GetStatsRow
+	err := row.Scan(&i.TotalUsers, &i.TotalChats)
+	return i, err
+}
+
 const getUser = `-- name: GetUser :one
 SELECT displayed_name
 FROM users

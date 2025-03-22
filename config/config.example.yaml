@@ -1,3 +1,7 @@
+metrics:
+  addr: ":9080"
+  update_period: 5s
+
 sticker_sets:
   - name: "SVOMonions"
     exclude_sticker_ids:

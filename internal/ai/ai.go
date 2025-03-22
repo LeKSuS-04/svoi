@@ -27,7 +27,18 @@ func NewAI(config *Config) *AI {
 	return &AI{model: config.Model, cfg: config}
 }
 
-func (a *AI) GeneratePatrioticResponse(ctx context.Context, prompt string) (string, error) {
+func (a *AI) GeneratePatrioticResponse(ctx context.Context, prompt string) (response string, err error) {
+	start := time.Now()
+	defer func() {
+		if err != nil {
+			failedGenerations.Inc()
+		} else {
+			successfulGenerations.Inc()
+		}
+		duration := time.Since(start).Seconds()
+		generationDurationSeconds.Observe(duration)
+	}()
+
 	reqModel := OpenrouterRequest{
 		Model: a.model,
 		Messages: []Message{

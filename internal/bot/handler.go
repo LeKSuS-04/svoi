@@ -3,7 +3,9 @@ package bot
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/mymmrac/telego"
@@ -12,7 +14,29 @@ import (
 	"github.com/LeKSuS-04/svoi-bot/internal/db"
 )
 
-func (w *worker) handleUpdate(ctx context.Context, update telego.Update) error {
+func (w *worker) handleUpdate(ctx context.Context, update telego.Update) (err error) {
+	start := time.Now()
+	defer func() {
+		chatID := ""
+		updateType := ""
+		duration := time.Since(start).Seconds()
+		if update.Message != nil {
+			chatID = strconv.FormatInt(update.Message.Chat.ID, 10)
+			updateType = "message"
+		}
+
+		if updateType == "" {
+			return
+		}
+
+		if err != nil {
+			failedUpdates.WithLabelValues(chatID, updateType).Inc()
+		} else {
+			successfulUpdates.WithLabelValues(chatID, updateType).Inc()
+		}
+		updateDurationSeconds.WithLabelValues(chatID, updateType).Observe(duration)
+	}()
+
 	switch {
 	case update.Message != nil:
 		return w.handleMessage(ctx, update.Message)
@@ -46,6 +70,9 @@ func (w *worker) handleMessage(ctx context.Context, msg *telego.Message) error {
 	for _, command := range commands {
 		if command.Called(msg, username) {
 			w.log.WithField("command", "/"+command.Name).Debug("Running command")
+			commandUsageStatistics.
+				WithLabelValues(strconv.FormatInt(msg.Chat.ID, 10), command.Name).
+				Inc()
 			return w.RunCommand(ctx, command, msg)
 		}
 	}
@@ -91,7 +118,11 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 		trigger  trigger
 	}
 	replies := make([]reply, len(triggers))
+	chatIDLabelValue := strconv.FormatInt(msg.Chat.ID, 10)
 	for i, trigger := range triggers {
+		triggerTypeStatistics.
+			WithLabelValues(chatIDLabelValue, string(trigger.ttype)).
+			Inc()
 		switch trigger.ttype {
 		case svo:
 			stats.SvoCount += 1
@@ -120,6 +151,10 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 	}
 
 	for _, r := range replies {
+		responseTypeStatistics.
+			WithLabelValues(chatIDLabelValue, string(r.response.getType())).
+			Inc()
+
 		if r.response.getType() == likvidirovan {
 			stats.LikvidirovanCount += 1
 		}

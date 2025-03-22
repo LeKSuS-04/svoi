@@ -8,12 +8,12 @@ import (
 	"github.com/LeKSuS-04/svoi-bot/internal/db"
 )
 
-type triggerType int
-type responseType int
+type triggerType string
+type responseType string
 
 const (
-	svo triggerType = iota
-	zov triggerType = iota
+	svo triggerType = "svo"
+	zov triggerType = "zov"
 )
 
 type matcher struct {

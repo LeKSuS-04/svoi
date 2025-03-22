@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"time"
 
 	"github.com/sethvargo/go-envconfig"
 	"gopkg.in/yaml.v3"
@@ -24,6 +25,12 @@ type Config struct {
 	StickerSets []StickerSetConfig `yaml:"sticker_sets"`
 	AdminIDs    []int64            `yaml:"admin_ids"`
 	AI          *ai.Config         `yaml:"ai"`
+	Metrics     *MetricsConfig     `yaml:"metrics"`
+}
+
+type MetricsConfig struct {
+	Addr         string        `yaml:"addr"`
+	UpdatePeriod time.Duration `yaml:"update_period"`
 }
 
 func LoadConfig(path string) (*Config, error) {
