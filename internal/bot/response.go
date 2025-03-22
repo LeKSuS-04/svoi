@@ -64,11 +64,11 @@ func isAIRespondable(msg string) bool {
 func (w *worker) generateResponse(ctx context.Context, msg *telego.Message) (response, error) {
 	rng := rand.IntN(100)
 
-	aiResponseThreshold := 60
+	allowAI := true
 	if w.ai == nil {
-		aiResponseThreshold = 100
+		allowAI = false
 	} else if _, ok := w.cache.Get(aiSenderKey(msg.From.ID)); ok {
-		aiResponseThreshold = 100
+		allowAI = false
 	}
 
 	switch {
@@ -88,7 +88,7 @@ func (w *worker) generateResponse(ctx context.Context, msg *telego.Message) (res
 			ttype:  regular,
 		}, nil
 
-	case rng >= aiResponseThreshold && isAIRespondable(msg.Text):
+	case rng >= 60 && allowAI && isAIRespondable(msg.Text):
 		log := w.log.WithField("sender_id", msg.From.ID)
 		log.WithField("text", msg.Text).Info("Generating patriotic response")
 		resp, err := w.ai.GeneratePatrioticResponse(ctx, msg.Text)

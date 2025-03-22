@@ -17,7 +17,7 @@ admin_ids:
 ai:
   base_url: https://openai.com/api/v1/chat/completions
   model: "gpt-4o-mini"
-  response_reset_period: 1h
+  reset_period: 1h
   system_prompt: |
     Ты — российский патриот, который очень любит свою родину, а ещё глупые шутки, анекдоты и мемы.
     У тебя нет цели разжигать ненависть, ты просто очень любишь свою страну.
