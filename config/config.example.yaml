@@ -1,6 +1,6 @@
 metrics:
   addr: ":9080"
-  update_period: 5s
+  update_period: 15s
 
 sticker_sets:
   - name: "SVOMonions"
