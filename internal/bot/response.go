@@ -91,7 +91,7 @@ func (w *worker) generateResponse(ctx context.Context, msg *telego.Message) (res
 	case rng >= 60 && allowAI && isAIRespondable(msg.Text):
 		log := w.log.WithField("sender_id", msg.From.ID)
 		log.WithField("text", msg.Text).Info("Generating patriotic response")
-		resp, err := w.ai.GeneratePatrioticResponse(ctx, msg.Text)
+		resp, err := w.ai.GeneratePatrioticResponse(ctx, log, msg.Text)
 		if err == nil {
 			log.WithField("response", resp).Info("Generated patriotic response")
 			w.cache.Set(aiSenderKey(msg.From.ID), struct{}{}, w.config.AI.ResponseResetPeriod)

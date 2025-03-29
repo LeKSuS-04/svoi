@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Config struct {
@@ -28,7 +30,7 @@ func NewAI(config *Config) *AI {
 	return &AI{model: config.Model, cfg: config}
 }
 
-func (a *AI) GeneratePatrioticResponse(ctx context.Context, prompt string) (response string, err error) {
+func (a *AI) GeneratePatrioticResponse(ctx context.Context, log *logrus.Entry, prompt string) (response string, err error) {
 	start := time.Now()
 	defer func() {
 		if err != nil {
@@ -54,6 +56,11 @@ func (a *AI) GeneratePatrioticResponse(ctx context.Context, prompt string) (resp
 		return "", fmt.Errorf("marshal request: %w", err)
 	}
 
+	log.WithFields(logrus.Fields{
+		"url":             a.cfg.BaseURL,
+		"model":           a.model,
+		"fallback_models": a.cfg.FallbackModels,
+	}).Debug("Sending request to AI provider")
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.cfg.BaseURL, bytes.NewBuffer(jsonReq))
 	if err != nil {
 		return "", fmt.Errorf("new request: %w", err)
@@ -75,6 +82,13 @@ func (a *AI) GeneratePatrioticResponse(ctx context.Context, prompt string) (resp
 	if err := json.NewDecoder(rsp.Body).Decode(&rspModel); err != nil {
 		return "", fmt.Errorf("decode response: %w", err)
 	}
+	log.WithFields(logrus.Fields{
+		"used_model": rspModel.Model,
+		"usage":      rspModel.Usage,
+	}).Info("Received response from AI provider")
+	promptTokens.WithLabelValues(rspModel.Model).Add(float64(rspModel.Usage.PromptTokens))
+	completionTokens.WithLabelValues(rspModel.Model).Add(float64(rspModel.Usage.CompletionTokens))
+	totalTokens.WithLabelValues(rspModel.Model).Add(float64(rspModel.Usage.TotalTokens))
 
 	if len(rspModel.Choices) != 1 {
 		return "", fmt.Errorf("unexpected number of choices: %d", len(rspModel.Choices))
@@ -101,6 +115,14 @@ type Message struct {
 
 type OpenrouterResponse struct {
 	Choices []Choice `json:"choices"`
+	Model   string   `json:"model"`
+	Usage   Usage    `json:"usage"`
+}
+
+type Usage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
 }
 
 type Choice struct {
