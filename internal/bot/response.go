@@ -92,16 +92,17 @@ func (w *worker) generateResponse(ctx context.Context, msg *telego.Message) (res
 		log := w.log.WithField("sender_id", msg.From.ID)
 		log.WithField("text", msg.Text).Info("Generating patriotic response")
 		resp, err := w.ai.GeneratePatrioticResponse(ctx, msg.Text)
-		if err != nil {
-			return nil, fmt.Errorf("generate patriotic response: %w", err)
+		if err == nil {
+			log.WithField("response", resp).Info("Generated patriotic response")
+			w.cache.Set(aiSenderKey(msg.From.ID), struct{}{}, w.config.AI.ResponseResetPeriod)
+			return &textResponse{
+				text:  resp,
+				ttype: aiGenerated,
+			}, nil
 		}
-		log.WithField("response", resp).Info("Generated patriotic response")
 
-		w.cache.Set(aiSenderKey(msg.From.ID), struct{}{}, w.config.AI.ResponseResetPeriod)
-		return &textResponse{
-			text:  resp,
-			ttype: aiGenerated,
-		}, nil
+		log.WithField("error", err).Error("Failed to generate patriotic response, falling back to regular response")
+		fallthrough
 
 	default:
 		return &textResponse{

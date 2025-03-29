@@ -63,6 +63,11 @@ func (a *AI) GeneratePatrioticResponse(ctx context.Context, prompt string) (resp
 	if err != nil {
 		return "", fmt.Errorf("new completion: %w", err)
 	}
+	defer rsp.Body.Close()
+
+	if rsp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status code: %d", rsp.StatusCode)
+	}
 
 	var rspModel OpenrouterResponse
 	if err := json.NewDecoder(rsp.Body).Decode(&rspModel); err != nil {
