@@ -14,6 +14,7 @@ type Config struct {
 	BaseURL             string        `yaml:"base_url"`
 	APIKey              string        `env:"AI_API_KEY"`
 	Model               string        `yaml:"model"`
+	FallbackModels      []string      `yaml:"fallback_models"`
 	ResponseResetPeriod time.Duration `yaml:"reset_period"`
 	SystemPrompt        string        `yaml:"system_prompt"`
 }
@@ -40,7 +41,8 @@ func (a *AI) GeneratePatrioticResponse(ctx context.Context, prompt string) (resp
 	}()
 
 	reqModel := OpenrouterRequest{
-		Model: a.model,
+		Model:  a.model,
+		Models: a.cfg.FallbackModels,
 		Messages: []Message{
 			{Role: "system", Content: a.cfg.SystemPrompt},
 			{Role: "user", Content: prompt},
@@ -88,6 +90,7 @@ func (a *AI) GeneratePatrioticResponse(ctx context.Context, prompt string) (resp
 
 type OpenrouterRequest struct {
 	Model    string    `json:"model"`
+	Models   []string  `json:"models,omitempty"`
 	Messages []Message `json:"messages"`
 }
 
