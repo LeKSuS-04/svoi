@@ -21,8 +21,8 @@ type matcher struct {
 	re    *regexp.Regexp
 }
 
-const svoRegexp = "[сСsS][вВvV][оОoO]+"
-const zovRegexp = "[зЗzZ][оОoO]+[вВvV]"
+const svoRegexp = "[сСsScC][вВvVB8][оОoO0]+"
+const zovRegexp = "[зЗzZ3][оОoO0]+[8вВvVB]"
 
 var matchers = []matcher{
 	{
