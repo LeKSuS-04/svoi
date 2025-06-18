@@ -91,17 +91,20 @@ func (w *worker) generateResponse(ctx context.Context, msg *telego.Message) (res
 	case rng >= 60 && allowAI && isAIRespondable(msg.Text):
 		log := w.log.WithField("sender_id", msg.From.ID)
 		log.WithField("text", msg.Text).Info("Generating patriotic response")
+
+		w.cache.Set(aiSenderKey(msg.From.ID), struct{}{}, w.config.AI.ResponseResetPeriod)
 		resp, err := w.ai.GeneratePatrioticResponse(ctx, log, msg.Text)
-		if err == nil {
+		if err != nil {
+			w.cache.Delete(aiSenderKey(msg.From.ID))
+			log.WithField("error", err).Error("Failed to generate patriotic response, falling back to regular response")
+		} else {
 			log.WithField("response", resp).Info("Generated patriotic response")
-			w.cache.Set(aiSenderKey(msg.From.ID), struct{}{}, w.config.AI.ResponseResetPeriod)
 			return &textResponse{
 				text:  resp,
 				ttype: aiGenerated,
 			}, nil
 		}
 
-		log.WithField("error", err).Error("Failed to generate patriotic response, falling back to regular response")
 		fallthrough
 
 	default:
