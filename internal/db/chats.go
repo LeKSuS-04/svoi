@@ -5,12 +5,7 @@ import (
 	"fmt"
 )
 
-func GetAllChats(ctx context.Context, connector Connector) (chatIDs []int, _ error) {
-	db, err := connector.Connect()
-	if err != nil {
-		return nil, fmt.Errorf("connect to db: %w", err)
-	}
-
+func (db *DB) GetAllChats(ctx context.Context) (chatIDs []int, _ error) {
 	chats, err := db.GetAllChats(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get all chats: %w", err)

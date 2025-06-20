@@ -20,7 +20,7 @@ type DB struct {
 	*q.Queries
 }
 
-func openConnection(dbPath string) (*DB, error) {
+func NewDB(dbPath string) (*DB, error) {
 	var connectionString string
 	if dbPath == InMemory {
 		connectionString = dbPath

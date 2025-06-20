@@ -106,8 +106,7 @@ func (b *Bot) runMetricsServer(ctx context.Context) {
 	}()
 
 	go func() {
-		connector := &db.SimpleConnector{DbPath: b.dbPath}
-		var db *db.DB
+		var dbconn *db.DB
 		var err error
 
 		ticker := time.NewTicker(b.config.Metrics.UpdatePeriod)
@@ -121,18 +120,18 @@ func (b *Bot) runMetricsServer(ctx context.Context) {
 			case <-ticker.C:
 			}
 
-			if db == nil {
-				db, err = connector.Connect()
+			if dbconn == nil {
+				dbconn, err = db.NewDB(b.dbPath)
 				if err != nil {
-					db = nil
+					dbconn = nil
 					logger.WithError(err).Error("Failed to connect to database")
 					continue
 				}
 			}
 
-			stats, err := db.GetStats(ctx)
+			stats, err := dbconn.GetStats(ctx)
 			if err != nil {
-				db = nil
+				dbconn = nil
 				logger.WithError(err).Error("Failed to get stats")
 				continue
 			}

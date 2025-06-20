@@ -14,13 +14,13 @@ import (
 )
 
 type worker struct {
-	config    *Config
-	api       *telego.Bot
-	cache     *cache.Cache
-	connector db.Connector
-	ai        *ai.AI
-	log       *logrus.Entry
-	updates   <-chan telego.Update
+	config  *Config
+	api     *telego.Bot
+	cache   *cache.Cache
+	db      *db.DB
+	ai      *ai.AI
+	log     *logrus.Entry
+	updates <-chan telego.Update
 }
 
 func (b *Bot) Run(ctx context.Context) error {
@@ -36,6 +36,11 @@ func (b *Bot) Run(ctx context.Context) error {
 		aiHandler = ai.NewAI(b.config.AI)
 	}
 
+	db, err := db.NewDB(b.dbPath)
+	if err != nil {
+		return fmt.Errorf("open db connection: %w", err)
+	}
+
 	wg := sync.WaitGroup{}
 	wg.Add(b.workerCount)
 	for i := range b.workerCount {
@@ -43,11 +48,11 @@ func (b *Bot) Run(ctx context.Context) error {
 		go func() {
 			defer wg.Done()
 			w := worker{
-				config:    b.config,
-				api:       b.api,
-				cache:     cache,
-				connector: &db.SimpleConnector{DbPath: b.dbPath},
-				ai:        aiHandler,
+				config: b.config,
+				api:    b.api,
+				cache:  cache,
+				db:     db,
+				ai:     aiHandler,
 				log: b.log.WithFields(logrus.Fields{
 					"component": "worker",
 					"workerID":  workerId,

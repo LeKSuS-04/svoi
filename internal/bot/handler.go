@@ -173,7 +173,7 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 		}
 	}
 
-	err := db.IncreaseStats(ctx, w.connector, stats)
+	err := w.db.IncreaseStats(ctx, stats)
 	if err != nil {
 		return fmt.Errorf("update stats: %w", err)
 	}

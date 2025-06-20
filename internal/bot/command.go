@@ -8,8 +8,6 @@ import (
 
 	"github.com/mymmrac/telego"
 	"github.com/sirupsen/logrus"
-
-	"github.com/LeKSuS-04/svoi-bot/internal/db"
 )
 
 type Command struct {
@@ -43,7 +41,7 @@ func (w *worker) RunCommand(ctx context.Context, cmd Command, msg *telego.Messag
 }
 
 func (w *worker) handleStatsRequest(ctx context.Context, msg *telego.Message) error {
-	stats, err := db.RetrieveStats(ctx, w.connector, int(msg.Chat.ID))
+	stats, err := w.db.RetrieveStats(ctx, int(msg.Chat.ID))
 	if err != nil {
 		return fmt.Errorf("get chat stats: %w", err)
 	}
@@ -99,7 +97,7 @@ func (w *worker) handleBroadcastRequest(ctx context.Context, msg *telego.Message
 		return nil
 	}
 
-	chats, err := db.GetAllChats(ctx, w.connector)
+	chats, err := w.db.GetAllChats(ctx)
 	if err != nil {
 		return fmt.Errorf("get all chats: %w", err)
 	}
