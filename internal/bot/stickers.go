@@ -17,10 +17,13 @@ func (w *worker) getSticker() (stickerFileID string, err error) {
 	key := stickerSetCacheKey(stickerSetConfig.Name)
 	set, ok := w.cache.Get(key)
 	if !ok {
-		set, err = w.loadStickerSet(stickerSetConfig)
+		v, err, _ := w.getStickerSetG.Do(key, func() (any, error) {
+			return w.loadStickerSet(stickerSetConfig)
+		})
 		if err != nil {
 			return "", fmt.Errorf("load sticker set: %w", err)
 		}
+		set = v.([]string)
 		w.cache.Set(key, set, 0)
 	}
 
@@ -43,21 +46,4 @@ func (w *worker) loadStickerSet(stickerSetConfig StickerSetConfig) (stickerFileI
 		}
 	}
 	return stickerFileIDs, nil
-}
-
-const selfUsernameKey = "self_username"
-
-func (w *worker) getSelfUsername() (string, error) {
-	username, ok := w.cache.Get(selfUsernameKey)
-	if ok {
-		return username.(string), nil
-	}
-
-	self, err := w.api.GetMe()
-	if err != nil {
-		return "", fmt.Errorf("get self: %w", err)
-	}
-
-	w.cache.Set(selfUsernameKey, self.Username, -1)
-	return self.Username, nil
 }

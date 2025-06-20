@@ -9,10 +9,50 @@ import (
 	"unicode/utf8"
 
 	"github.com/mymmrac/telego"
+	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/singleflight"
 
+	"github.com/LeKSuS-04/svoi-bot/internal/ai"
 	"github.com/LeKSuS-04/svoi-bot/internal/db"
 )
+
+type worker struct {
+	config         *Config
+	api            *telego.Bot
+	botUsername    string
+	getStickerSetG *singleflight.Group
+	cache          *cache.Cache
+	db             *db.DB
+	ai             *ai.AI
+	log            *logrus.Entry
+	updates        <-chan telego.Update
+}
+
+func (w *worker) Work(ctx context.Context) {
+	w.log.Info("Launched worker")
+
+loop:
+	for {
+		select {
+		case <-ctx.Done():
+			break loop
+
+		case update := <-w.updates:
+			err := w.handleUpdate(ctx, update)
+			if err != nil {
+				w.log.
+					WithField("updateId", update.UpdateID).
+					WithError(err).
+					Error("Failed to handle update")
+			} else {
+				w.log.WithField("updateId", update.UpdateID).Debug("Successfully handled update")
+			}
+		}
+	}
+
+	w.log.Info("Stopped worker")
+}
 
 func (w *worker) handleUpdate(ctx context.Context, update telego.Update) (err error) {
 	start := time.Now()
@@ -46,11 +86,6 @@ func (w *worker) handleUpdate(ctx context.Context, update telego.Update) (err er
 }
 
 func (w *worker) handleMessage(ctx context.Context, msg *telego.Message) error {
-	username, err := w.getSelfUsername()
-	if err != nil {
-		return fmt.Errorf("get self username: %w", err)
-	}
-
 	commands := []Command{
 		{
 			Name:    "svoistats",
@@ -68,7 +103,7 @@ func (w *worker) handleMessage(ctx context.Context, msg *telego.Message) error {
 	}
 
 	for _, command := range commands {
-		if command.Called(msg, username) {
+		if command.Called(msg, w.botUsername) {
 			w.log.WithField("command", "/"+command.Name).Debug("Running command")
 			commandUsageStatistics.
 				WithLabelValues(strconv.FormatInt(msg.Chat.ID, 10), command.Name).
@@ -103,7 +138,7 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 			"triggersLength": triggersLength,
 			"textLength":     textLength,
 		}).Debug("Evaluating spammer status")
-		if IsTooManyTriggers(triggerCount, triggersLength, textLength) {
+		if tooManyTriggers(triggerCount, triggersLength, textLength) {
 			response := simpleReply("Спамер", msg)
 			_, err := w.api.SendMessage(response)
 			if err != nil {
@@ -114,30 +149,33 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 	}
 
 	type reply struct {
-		response response
+		response triggerResponse
 		trigger  trigger
 	}
 	replies := make([]reply, len(triggers))
 	chatIDLabelValue := strconv.FormatInt(msg.Chat.ID, 10)
 	for i, trigger := range triggers {
 		triggerTypeStatistics.
-			WithLabelValues(chatIDLabelValue, string(trigger.ttype)).
+			WithLabelValues(chatIDLabelValue, string(trigger.typ)).
 			Inc()
-		switch trigger.ttype {
+		switch trigger.typ {
 		case svo:
 			stats.SvoCount += 1
 		case zov:
 			stats.ZovCount += 1
 		}
 
-		rsp, err := w.generateResponse(ctx, msg)
+		rsp, err := w.generateTriggerResponse(ctx, trigger, msg)
 		if err != nil {
-			// TODO: fallback to default response and scream about error in logs and metrics
-			return fmt.Errorf("generate response: %w", err)
+			w.log.WithError(err).WithFields(logrus.Fields{
+				"trigger": trigger,
+				"msg":     msg,
+			}).Warn("Failed to generate response")
+			rsp = w.makeDefaultResponse(trigger)
 		}
 
 		// Only answer with AI-generated responses
-		if rsp.getType() == aiGenerated {
+		if rsp.responseType() == aiGenerated {
 			replies = []reply{{
 				response: rsp,
 				trigger:  trigger,
@@ -153,14 +191,14 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 
 	for _, r := range replies {
 		responseTypeStatistics.
-			WithLabelValues(chatIDLabelValue, string(r.response.getType())).
+			WithLabelValues(chatIDLabelValue, string(r.response.responseType())).
 			Inc()
 
-		if r.response.getType() == likvidirovan {
+		if r.response.responseType() == likvidirovan {
 			stats.LikvidirovanCount += 1
 		}
 
-		err := r.response.reply(
+		err := r.response.sendReply(
 			w.api,
 			msg.Chat.ChatID(),
 			&telego.ReplyParameters{

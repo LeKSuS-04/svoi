@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/LeKSuS-04/svoi-bot/internal/db"
 	"github.com/mymmrac/telego"
 	"github.com/sirupsen/logrus"
 )
@@ -60,6 +61,40 @@ func (w *worker) handleStatsRequest(ctx context.Context, msg *telego.Message) er
 	}
 
 	return nil
+}
+
+func fmtStatsLine(stat db.NamedStats) string {
+	svoStr := "СВО"
+
+	zovStr := func() string {
+		switch stat.ZovCount % 10 {
+		case 1:
+			return "ЗОВ"
+		case 2, 3, 4:
+			return "ЗОВ-а"
+		default:
+			return "ЗОВ-ов"
+		}
+	}()
+
+	likvidirovanStr := func() string {
+		switch stat.LikvidirovanCount {
+		case 1:
+			return "ЛИКВИДАЦИЮ"
+		case 2, 3, 4:
+			return "ЛИКВИДАЦИИ"
+		default:
+			return "ЛИКВИДАЦИЙ"
+		}
+	}()
+
+	return fmt.Sprintf(
+		"%s: %d %s и %d %s повлекли за собой %d %s",
+		stat.UserDisplayName,
+		stat.SvoCount, svoStr,
+		stat.ZovCount, zovStr,
+		stat.LikvidirovanCount, likvidirovanStr,
+	)
 }
 
 func (w *worker) handlePwdRequest(ctx context.Context, msg *telego.Message) error {

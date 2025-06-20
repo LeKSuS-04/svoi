@@ -1,8 +1,8 @@
 module github.com/LeKSuS-04/svoi-bot
 
-go 1.22.3
+go 1.23.0
 
-toolchain go1.22.4
+toolchain go1.24.1
 
 require (
 	github.com/mymmrac/telego v0.30.2
@@ -10,6 +10,7 @@ require (
 	github.com/prometheus/client_golang v1.21.1
 	github.com/sethvargo/go-envconfig v1.1.0
 	github.com/sirupsen/logrus v1.9.3
+	golang.org/x/sync v0.15.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.30.1
 )
