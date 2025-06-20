@@ -132,6 +132,7 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 
 		rsp, err := w.generateResponse(ctx, msg)
 		if err != nil {
+			// TODO: fallback to default response and scream about error in logs and metrics
 			return fmt.Errorf("generate response: %w", err)
 		}
 

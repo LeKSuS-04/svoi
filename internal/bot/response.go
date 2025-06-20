@@ -71,6 +71,13 @@ func (w *worker) generateResponse(ctx context.Context, msg *telego.Message) (res
 		allowAI = false
 	}
 
+	makeDefaultResponse := func() *textResponse {
+		return &textResponse{
+			text:  "Г" + strings.Repeat("О", 3+rand.IntN(10)) + "Л",
+			ttype: regular,
+		}
+	}
+
 	switch {
 	case rng == 0:
 		return &textResponse{
@@ -90,28 +97,24 @@ func (w *worker) generateResponse(ctx context.Context, msg *telego.Message) (res
 
 	case rng >= 60 && allowAI && isAIRespondable(msg.Text):
 		log := w.log.WithField("sender_id", msg.From.ID)
-		log.WithField("text", msg.Text).Info("Generating patriotic response")
+		log.WithField("text", msg.Text).Info("Generating AI response")
 
-		w.cache.Set(aiSenderKey(msg.From.ID), struct{}{}, w.config.AI.ResponseResetPeriod)
+		if err := w.cache.Add(aiSenderKey(msg.From.ID), struct{}{}, w.config.AI.ResponseResetPeriod); err != nil {
+			log.WithError(err).Debug("Failed to add to cache")
+			return makeDefaultResponse(), nil
+		}
+
 		resp, err := w.ai.GeneratePatrioticResponse(ctx, log, msg.Text)
 		if err != nil {
 			w.cache.Delete(aiSenderKey(msg.From.ID))
-			log.WithField("error", err).Error("Failed to generate patriotic response, falling back to regular response")
-		} else {
-			log.WithField("response", resp).Info("Generated patriotic response")
-			return &textResponse{
-				text:  resp,
-				ttype: aiGenerated,
-			}, nil
+			return nil, fmt.Errorf("generate ai response: %w", err)
 		}
 
-		fallthrough
+		log.WithField("response", resp).Info("Generated AI response")
+		return &textResponse{text: resp, ttype: aiGenerated}, nil
 
 	default:
-		return &textResponse{
-			text:  "Г" + strings.Repeat("О", 3+rand.IntN(10)) + "Л",
-			ttype: regular,
-		}, nil
+		return makeDefaultResponse(), nil
 	}
 }
 
