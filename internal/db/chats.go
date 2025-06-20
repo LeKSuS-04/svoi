@@ -6,7 +6,7 @@ import (
 )
 
 func (db *DB) GetAllChats(ctx context.Context) (chatIDs []int, _ error) {
-	chats, err := db.GetAllChats(ctx)
+	chats, err := db.Queries.GetAllChats(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get all chats: %w", err)
 	}
