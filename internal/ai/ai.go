@@ -72,7 +72,7 @@ func (a *AI) GeneratePatrioticResponse(ctx context.Context, log *logrus.Entry, p
 	if err != nil {
 		return "", fmt.Errorf("new completion: %w", err)
 	}
-	defer rsp.Body.Close()
+	defer func() { _ = rsp.Body.Close() }()
 
 	if rsp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("unexpected status code: %d", rsp.StatusCode)
