@@ -15,19 +15,24 @@ func stickerSetCacheKey(stickerSetName string) string {
 func (w *worker) getSticker() (stickerFileID string, err error) {
 	stickerSetConfig := w.config.StickerSets[rand.IntN(len(w.config.StickerSets))]
 	key := stickerSetCacheKey(stickerSetConfig.Name)
-	set, ok := w.cache.Get(key)
-	if !ok {
-		v, err, _ := w.getStickerSetG.Do(key, func() (any, error) {
-			return w.loadStickerSet(stickerSetConfig)
-		})
-		if err != nil {
-			return "", fmt.Errorf("load sticker set: %w", err)
+
+	v, err, _ := w.getStickerSetG.Do(key, func() (any, error) {
+		set, ok := w.cache.Get(key)
+		if ok {
+			return set, nil
 		}
-		set = v.([]string)
-		w.cache.Set(key, set, 0)
+		stickerFileIDs, err := w.loadStickerSet(stickerSetConfig)
+		if err != nil {
+			return nil, fmt.Errorf("load sticker set: %w", err)
+		}
+		w.cache.Set(key, stickerFileIDs, 0)
+		return stickerFileIDs, nil
+	})
+	if err != nil {
+		return "", fmt.Errorf("get sticker set: %w", err)
 	}
 
-	setStr := set.([]string)
+	setStr := v.([]string)
 	stickerFileID = setStr[rand.IntN(len(setStr))]
 	return stickerFileID, nil
 }
