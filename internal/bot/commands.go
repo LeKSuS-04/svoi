@@ -43,7 +43,7 @@ func (w *worker) RunCommand(ctx context.Context, cmd Command, msg *telego.Messag
 }
 
 func (w *worker) handleStatsRequest(ctx context.Context, msg *telego.Message) error {
-	stats, err := db.RetrieveStats(ctx, w.connector, int(msg.Chat.ID))
+	stats, err := w.db.RetrieveStats(ctx, int(msg.Chat.ID))
 	if err != nil {
 		return fmt.Errorf("get chat stats: %w", err)
 	}
@@ -62,6 +62,40 @@ func (w *worker) handleStatsRequest(ctx context.Context, msg *telego.Message) er
 	}
 
 	return nil
+}
+
+func fmtStatsLine(stat db.NamedStats) string {
+	svoStr := "СВО"
+
+	zovStr := func() string {
+		switch stat.ZovCount % 10 {
+		case 1:
+			return "ЗОВ"
+		case 2, 3, 4:
+			return "ЗОВ-а"
+		default:
+			return "ЗОВ-ов"
+		}
+	}()
+
+	likvidirovanStr := func() string {
+		switch stat.LikvidirovanCount {
+		case 1:
+			return "ЛИКВИДАЦИЮ"
+		case 2, 3, 4:
+			return "ЛИКВИДАЦИИ"
+		default:
+			return "ЛИКВИДАЦИЙ"
+		}
+	}()
+
+	return fmt.Sprintf(
+		"%s: %d %s и %d %s повлекли за собой %d %s",
+		stat.UserDisplayName,
+		stat.SvoCount, svoStr,
+		stat.ZovCount, zovStr,
+		stat.LikvidirovanCount, likvidirovanStr,
+	)
 }
 
 func (w *worker) handlePwdRequest(ctx context.Context, msg *telego.Message) error {
@@ -99,7 +133,7 @@ func (w *worker) handleBroadcastRequest(ctx context.Context, msg *telego.Message
 		return nil
 	}
 
-	chats, err := db.GetAllChats(ctx, w.connector)
+	chats, err := w.db.GetAllChats(ctx)
 	if err != nil {
 		return fmt.Errorf("get all chats: %w", err)
 	}
