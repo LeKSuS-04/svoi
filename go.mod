@@ -1,8 +1,6 @@
 module github.com/LeKSuS-04/svoi-bot
 
-go 1.23.0
-
-toolchain go1.24.1
+go 1.24.4
 
 require (
 	github.com/mymmrac/telego v0.30.2
