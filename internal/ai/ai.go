@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -75,7 +76,8 @@ func (a *AI) GeneratePatrioticResponse(ctx context.Context, log *logrus.Entry, p
 	defer func() { _ = rsp.Body.Close() }()
 
 	if rsp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("unexpected status code: %d", rsp.StatusCode)
+		body, _ := io.ReadAll(io.LimitReader(rsp.Body, 1024))
+		return "", fmt.Errorf("unexpected status code: %d; body: %s", rsp.StatusCode, string(body))
 	}
 
 	var rspModel OpenrouterResponse
