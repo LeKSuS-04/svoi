@@ -8,8 +8,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/LeKSuS-04/svoi-bot/internal/ai"
 	"github.com/mymmrac/telego"
+
+	"github.com/LeKSuS-04/svoi-bot/internal/ai"
 )
 
 type triggerType string
