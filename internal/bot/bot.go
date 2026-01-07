@@ -59,7 +59,11 @@ func (b *Bot) Run(ctx context.Context) error {
 	if b.config.AI.APIKey == "" {
 		log.WarnContext(ctx, "AI API key is not set, AI responses will be disabled")
 	} else {
-		aiHandler = ai.NewAI(b.config.AI)
+		var err error
+		aiHandler, err = ai.NewAI(b.config.AI)
+		if err != nil {
+			return fmt.Errorf("create ai handler: %w", err)
+		}
 	}
 
 	db, err := db.NewDB(b.dbPath)

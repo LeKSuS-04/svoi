@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/LeKSuS-04/svoi-bot/internal/ai"
 	"github.com/mymmrac/telego"
 )
 
@@ -189,7 +190,7 @@ func (w *worker) makeAIResponse(ctx context.Context, trigger trigger, msg *teleg
 		return w.makeDefaultResponse(trigger), nil
 	}
 
-	resp, err := w.ai.GeneratePatrioticResponse(ctx, msg.Text)
+	resp, err := w.ai.GeneratePatrioticResponse(ctx, msg.Text, makeAIContext(msg))
 	if err != nil {
 		w.cache.Delete(aiSenderKey(msg.From.ID))
 		return nil, fmt.Errorf("generate patriotic response: %w", err)
@@ -201,6 +202,14 @@ func (w *worker) makeAIResponse(ctx context.Context, trigger trigger, msg *teleg
 		},
 		text: resp,
 	}, nil
+}
+
+func makeAIContext(msg *telego.Message) ai.UserContext {
+	return ai.UserContext{
+		Username:  msg.From.Username,
+		FirstName: msg.From.FirstName,
+		LastName:  msg.From.LastName,
+	}
 }
 
 func isAIRespondable(msg string) bool {

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"log/slog"
 	"net/http"
@@ -24,20 +25,33 @@ type Config struct {
 }
 
 type AI struct {
-	model string
-	cfg   *Config
-	log   *slog.Logger
+	model        string
+	cfg          *Config
+	log          *slog.Logger
+	systemPrompt *template.Template
 }
 
-func NewAI(config *Config) *AI {
-	return &AI{
-		model: config.Model,
-		cfg:   config,
-		log:   logging.New("ai"),
+type UserContext struct {
+	Username  string
+	FirstName string
+	LastName  string
+}
+
+func NewAI(config *Config) (*AI, error) {
+	systemPrompt, err := template.New("system_prompt").Parse(config.SystemPrompt)
+	if err != nil {
+		return nil, fmt.Errorf("parse system prompt: %w", err)
 	}
+
+	return &AI{
+		model:        config.Model,
+		cfg:          config,
+		log:          logging.New("ai"),
+		systemPrompt: systemPrompt,
+	}, nil
 }
 
-func (a *AI) GeneratePatrioticResponse(ctx context.Context, prompt string) (response string, err error) {
+func (a *AI) GeneratePatrioticResponse(ctx context.Context, prompt string, userContext UserContext) (response string, err error) {
 	start := time.Now()
 	defer func() {
 		if err != nil {
@@ -49,11 +63,18 @@ func (a *AI) GeneratePatrioticResponse(ctx context.Context, prompt string) (resp
 		generationDurationSeconds.Observe(duration)
 	}()
 
+	systemPromptBuf := bytes.NewBuffer(nil)
+	err = a.systemPrompt.Execute(systemPromptBuf, userContext)
+	if err != nil {
+		return "", fmt.Errorf("render system prompt: %w", err)
+	}
+	a.log.DebugContext(ctx, "rendered system prompt", "prompt", systemPromptBuf.String(), "userContext", userContext)
+
 	reqModel := OpenrouterRequest{
 		Model:  a.model,
 		Models: a.cfg.FallbackModels,
 		Messages: []Message{
-			{Role: "system", Content: a.cfg.SystemPrompt},
+			{Role: "system", Content: systemPromptBuf.String()},
 			{Role: "user", Content: prompt},
 		},
 	}
@@ -63,7 +84,7 @@ func (a *AI) GeneratePatrioticResponse(ctx context.Context, prompt string) (resp
 		return "", fmt.Errorf("marshal request: %w", err)
 	}
 
-	a.log.DebugContext(ctx, "sending request to ai provider", "url", a.cfg.BaseURL, "model", a.model, "fallback_models", a.cfg.FallbackModels)
+	a.log.DebugContext(ctx, "sending request to ai provider", "url", a.cfg.BaseURL, "primaryModel", a.model, "fallbackModels", a.cfg.FallbackModels)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.cfg.BaseURL, bytes.NewBuffer(jsonReq))
 	if err != nil {
 		return "", fmt.Errorf("new request: %w", err)
@@ -86,7 +107,7 @@ func (a *AI) GeneratePatrioticResponse(ctx context.Context, prompt string) (resp
 	if err := json.NewDecoder(rsp.Body).Decode(&rspModel); err != nil {
 		return "", fmt.Errorf("decode response: %w", err)
 	}
-	a.log.DebugContext(ctx, "received response from ai provider", "used_model", rspModel.Model, "usage", rspModel.Usage)
+	a.log.DebugContext(ctx, "received response from ai provider", "usedModel", rspModel.Model, "usage", rspModel.Usage)
 
 	promptTokens.WithLabelValues(rspModel.Model).Add(float64(rspModel.Usage.PromptTokens))
 	completionTokens.WithLabelValues(rspModel.Model).Add(float64(rspModel.Usage.CompletionTokens))
