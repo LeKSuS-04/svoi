@@ -48,7 +48,11 @@ func (w *worker) handleStatsRequest(ctx context.Context, msg *telego.Message) er
 		line := fmtStatsLine(stat)
 		responseLines = append(responseLines, line)
 	}
-	responseText := strings.Join(responseLines, "\n\n")
+	responseText := strings.TrimSpace(strings.Join(responseLines, "\n\n"))
+
+	if responseText == "" {
+		responseText = "Для этого чата не было собрано никакой статистики :("
+	}
 
 	response := simpleReply(responseText, msg)
 	_, err = w.api.SendMessage(response)
