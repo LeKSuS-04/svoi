@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/mymmrac/telego"
-	"github.com/sirupsen/logrus"
 
 	"github.com/LeKSuS-04/svoi-bot/internal/db"
 )
@@ -25,11 +24,7 @@ func (c *Command) Called(msg *telego.Message, username string) bool {
 
 func (w *worker) RunCommand(ctx context.Context, cmd Command, msg *telego.Message) error {
 	if cmd.AdminOnly && !w.config.IsAdmin(msg.Chat.ID) {
-		w.log.WithFields(logrus.Fields{
-			"user_id":  msg.From.ID,
-			"username": msg.From.Username,
-			"command":  cmd.Name,
-		}).Debug("User tried to execute admin command")
+		w.log.DebugContext(ctx, "user tried to execute admin command", "command", cmd.Name)
 
 		response := simpleReply("You are not authorized to use this command", msg)
 		_, err := w.api.SendMessage(response)
@@ -137,10 +132,7 @@ func (w *worker) handleBroadcastRequest(ctx context.Context, msg *telego.Message
 	if err != nil {
 		return fmt.Errorf("get all chats: %w", err)
 	}
-	w.log.WithFields(logrus.Fields{
-		"chats":   chats,
-		"message": msg.ReplyToMessage.Text,
-	}).Debug("Broadcasting message to chats")
+	w.log.DebugContext(ctx, "broadcasting message to chats", "chats", chats, "message", msg.ReplyToMessage.Text)
 
 	errs := make([]error, 0)
 	successCount := 0
@@ -162,7 +154,7 @@ func (w *worker) handleBroadcastRequest(ctx context.Context, msg *telego.Message
 		}
 	}
 	if sendErr := errors.Join(errs...); sendErr != nil {
-		w.log.WithError(sendErr).Warn("Failed to send message to some chats")
+		w.log.WarnContext(ctx, "failed to send message to some chats", "error", sendErr)
 	}
 
 	response := simpleReply(

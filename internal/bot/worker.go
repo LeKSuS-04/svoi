@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -10,11 +11,11 @@ import (
 
 	"github.com/mymmrac/telego"
 	"github.com/patrickmn/go-cache"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/singleflight"
 
 	"github.com/LeKSuS-04/svoi-bot/internal/ai"
 	"github.com/LeKSuS-04/svoi-bot/internal/db"
+	"github.com/LeKSuS-04/svoi-bot/internal/logging"
 )
 
 type worker struct {
@@ -25,7 +26,7 @@ type worker struct {
 	cache          *cache.Cache
 	db             *db.DB
 	ai             *ai.AI
-	log            *logrus.Entry
+	log            *slog.Logger
 	updates        <-chan telego.Update
 }
 
@@ -39,19 +40,35 @@ loop:
 			break loop
 
 		case update := <-w.updates:
-			err := w.handleUpdate(ctx, update)
-			if err != nil {
-				w.log.
-					WithField("updateId", update.UpdateID).
-					WithError(err).
-					Error("Failed to handle update")
+			uctx := populateUpdateContext(ctx, update)
+			if err := w.handleUpdate(uctx, update); err != nil {
+				w.log.ErrorContext(uctx, "failed to handle update", "error", err)
 			} else {
-				w.log.WithField("updateId", update.UpdateID).Debug("Successfully handled update")
+				w.log.DebugContext(uctx, "successfully handled update")
 			}
 		}
 	}
 
 	w.log.Info("Stopped worker")
+}
+
+func populateUpdateContext(ctx context.Context, update telego.Update) context.Context {
+	updateCtx := logging.PopulateContextID(ctx, "updateId")
+
+	telegramAttrs := []any{
+		slog.Int("updateId", update.UpdateID),
+	}
+	if update.Message != nil {
+		telegramAttrs = append(telegramAttrs,
+			slog.Int("messageId", update.Message.MessageID),
+			slog.Int64("chatId", update.Message.Chat.ID),
+			slog.Int64("fromId", update.Message.From.ID),
+			slog.String("fromUsername", update.Message.From.Username),
+		)
+	}
+	updateCtx = logging.PopulateContext(updateCtx, slog.Group("telegram", telegramAttrs...))
+
+	return updateCtx
 }
 
 func (w *worker) handleUpdate(ctx context.Context, update telego.Update) (err error) {
@@ -86,6 +103,8 @@ func (w *worker) handleUpdate(ctx context.Context, update telego.Update) (err er
 }
 
 func (w *worker) handleMessage(ctx context.Context, msg *telego.Message) error {
+	w.log.DebugContext(ctx, "handling message", "content", msg.Text)
+
 	commands := []Command{
 		{
 			Name:    "svoistats",
@@ -104,7 +123,7 @@ func (w *worker) handleMessage(ctx context.Context, msg *telego.Message) error {
 
 	for _, command := range commands {
 		if command.Called(msg, w.botUsername) {
-			w.log.WithField("command", "/"+command.Name).Debug("Running command")
+			w.log.DebugContext(ctx, "running command", "command", "/"+command.Name)
 			commandUsageStatistics.
 				WithLabelValues(strconv.FormatInt(msg.Chat.ID, 10), command.Name).
 				Inc()
@@ -125,38 +144,70 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 	}
 
 	triggers := findTriggers(msg.Text)
-	w.log.WithField("triggers", triggers).Debug("Found triggers")
-	{
-		triggerCount := len(triggers)
-		triggersLength := 0
-		for _, trigger := range triggers {
-			triggersLength += trigger.runeLength
-		}
-		textLength := utf8.RuneCountInString(msg.Text)
-		w.log.WithFields(logrus.Fields{
-			"triggerCount":   triggerCount,
-			"triggersLength": triggersLength,
-			"textLength":     textLength,
-		}).Debug("Evaluating spammer status")
-		if tooManyTriggers(triggerCount, triggersLength, textLength) {
-			response := simpleReply("Спамер", msg)
-			_, err := w.api.SendMessage(response)
-			if err != nil {
-				return fmt.Errorf("send message: %w", err)
-			}
-			return nil
-		}
+	if len(triggers) == 0 {
+		return nil
+	}
+	w.log.DebugContext(ctx, "found triggers", "triggers", triggers)
+
+	if isSpam, err := w.preventSpam(ctx, msg, triggers); err != nil {
+		return fmt.Errorf("prevent spam: %w", err)
+	} else if isSpam {
+		return nil
 	}
 
-	type reply struct {
-		response triggerResponse
-		trigger  trigger
+	replies, err := w.makeReplies(ctx, msg, triggers, &stats)
+	if err != nil {
+		return fmt.Errorf("make responses: %w", err)
 	}
-	replies := make([]reply, len(triggers))
-	chatIDLabelValue := strconv.FormatInt(msg.Chat.ID, 10)
-	for i, trigger := range triggers {
+
+	if err = w.sendReplies(msg, replies); err != nil {
+		return fmt.Errorf("send replies: %w", err)
+	}
+
+	if err = w.db.IncreaseStats(ctx, stats); err != nil {
+		return fmt.Errorf("update stats: %w", err)
+	}
+
+	return nil
+}
+
+func (w *worker) preventSpam(ctx context.Context, msg *telego.Message, triggers []trigger) (bool, error) {
+	triggerCount := len(triggers)
+	triggersLength := 0
+	for _, trigger := range triggers {
+		triggersLength += trigger.runeLength
+	}
+	textLength := utf8.RuneCountInString(msg.Text)
+	spam := tooManyTriggers(triggerCount, triggersLength, textLength)
+
+	w.log.DebugContext(ctx, "checking for spam",
+		slog.Int("triggerCount", triggerCount),
+		slog.Int("triggersLength", triggersLength),
+		slog.Int("textLength", textLength),
+		slog.Bool("isSpam", spam),
+	)
+
+	if spam {
+		response := simpleReply("Спамер", msg)
+		_, err := w.api.SendMessage(response)
+		if err != nil {
+			return false, fmt.Errorf("send message: %w", err)
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
+type reply struct {
+	response triggerResponse
+	trigger  trigger
+}
+
+func (w *worker) makeReplies(ctx context.Context, msg *telego.Message, triggers []trigger, stats *db.NamedStats) ([]reply, error) {
+	replies := make([]reply, 0, len(triggers))
+	for _, trigger := range triggers {
 		triggerTypeStatistics.
-			WithLabelValues(chatIDLabelValue, string(trigger.typ)).
+			WithLabelValues(chatIdLabel(msg), string(trigger.typ)).
 			Inc()
 		switch trigger.typ {
 		case svo:
@@ -167,36 +218,41 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 
 		rsp, err := w.generateTriggerResponse(ctx, trigger, msg)
 		if err != nil {
-			w.log.WithError(err).WithFields(logrus.Fields{
-				"trigger": trigger,
-				"msg":     msg,
-			}).Warn("Failed to generate response")
+			w.log.ErrorContext(ctx, "failed to generate response", "error", err, "trigger", trigger, "msg", msg)
 			rsp = w.makeDefaultResponse(trigger)
 		}
 
 		// Only answer with AI-generated responses
 		if rsp.responseType() == aiGenerated {
-			replies = []reply{{
+			return []reply{{
 				response: rsp,
 				trigger:  trigger,
-			}}
-			break
+			}}, nil
 		}
 
-		replies[i] = reply{
+		replies = append(replies, reply{
 			response: rsp,
 			trigger:  trigger,
-		}
+		})
 	}
 
+	// Count likvidirovan responses
+	// This is done after all replies are generated, as some "likvidirovan" responses might
+	// be discarded by an AI response.
 	for _, r := range replies {
-		responseTypeStatistics.
-			WithLabelValues(chatIDLabelValue, string(r.response.responseType())).
-			Inc()
-
 		if r.response.responseType() == likvidirovan {
 			stats.LikvidirovanCount += 1
 		}
+	}
+
+	return replies, nil
+}
+
+func (w *worker) sendReplies(msg *telego.Message, replies []reply) error {
+	for _, r := range replies {
+		responseTypeStatistics.
+			WithLabelValues(chatIdLabel(msg), string(r.response.responseType())).
+			Inc()
 
 		err := r.response.sendReply(
 			w.api,
@@ -211,13 +267,11 @@ func (w *worker) handleRegularMessage(ctx context.Context, msg *telego.Message) 
 			return fmt.Errorf("respond: %w", err)
 		}
 	}
-
-	err := w.db.IncreaseStats(ctx, stats)
-	if err != nil {
-		return fmt.Errorf("update stats: %w", err)
-	}
-
 	return nil
+}
+
+func chatIdLabel(msg *telego.Message) string {
+	return strconv.FormatInt(msg.Chat.ID, 10)
 }
 
 func simpleReply(responseText string, msg *telego.Message) *telego.SendMessageParams {

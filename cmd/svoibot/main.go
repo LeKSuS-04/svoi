@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/sirupsen/logrus"
+	"github.com/LeKSuS-04/svoi-bot/internal/logging"
 
 	"github.com/LeKSuS-04/svoi-bot/internal/bot"
 )
@@ -26,14 +26,18 @@ func main() {
 	flag.StringVar(&configPath, "config", "", "Path to config file")
 	flag.Parse()
 
+	log := logging.New("setup")
+
 	bot, err := createBot(configPath)
 	if err != nil {
-		logrus.WithError(err).Fatal("Failed to create bot")
+		log.ErrorContext(ctx, "failed to create bot", "error", err)
+		os.Exit(1)
 	}
 
 	err = bot.Run(ctx)
 	if err != nil {
-		logrus.WithError(err).Fatal("Failed to run")
+		log.ErrorContext(ctx, "failed to run bot", "error", err)
+		os.Exit(1)
 	}
 }
 
@@ -42,15 +46,9 @@ func createBot(configPath string) (*bot.Bot, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
-	fmt.Printf("%+v\b", config)
 
 	var opts []bot.Option
-
-	logger := logrus.New()
-	if config.Debug {
-		logger.Level = logrus.DebugLevel
-	}
-	opts = append(opts, bot.WithLogger(logger), bot.WithWorkerCount(16))
+	opts = append(opts, bot.WithWorkerCount(16))
 
 	if config.SqlitePath != "" {
 		opts = append(opts, bot.WithDBPath(config.SqlitePath))

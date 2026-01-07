@@ -8,9 +8,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
 
 	"github.com/LeKSuS-04/svoi-bot/internal/db"
+	"github.com/LeKSuS-04/svoi-bot/internal/logging"
 )
 
 const (
@@ -42,7 +42,7 @@ var (
 		prometheus.HistogramOpts{
 			Name:    "update_duration_seconds",
 			Help:    "Duration of update processing",
-			Buckets: []float64{0.001, 0.01, 0.1, 0.25, 0.5, 0.75, 1, 2, 5, 10},
+			Buckets: []float64{0.001, 0.01, 0.1, 0.25, 0.5, 0.75, 1, 2, 3, 4, 5, 10, 15, 20},
 		},
 		[]string{labelChatID, labelUpdateType},
 	)
@@ -87,7 +87,7 @@ var (
 )
 
 func (b *Bot) runMetricsServer(ctx context.Context) {
-	logger := b.log.WithField("component", "metrics")
+	logger := logging.New("metrics")
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
 		for {
@@ -98,7 +98,7 @@ func (b *Bot) runMetricsServer(ctx context.Context) {
 			default:
 				logger.Debug("Starting metrics server")
 				if err := http.ListenAndServe(b.config.Metrics.Addr, nil); err != nil {
-					logger.WithError(err).Error("Failed to start metrics server")
+					logger.ErrorContext(ctx, "failed to start metrics server", "error", err)
 				}
 				time.Sleep(1 * time.Second)
 			}
@@ -124,7 +124,7 @@ func (b *Bot) runMetricsServer(ctx context.Context) {
 				dbconn, err = db.NewDB(b.dbPath)
 				if err != nil {
 					dbconn = nil
-					logger.WithError(err).Error("Failed to connect to database")
+					logger.ErrorContext(ctx, "failed to connect to database", "error", err)
 					continue
 				}
 			}
@@ -132,13 +132,10 @@ func (b *Bot) runMetricsServer(ctx context.Context) {
 			stats, err := dbconn.GetStats(ctx)
 			if err != nil {
 				dbconn = nil
-				logger.WithError(err).Error("Failed to get stats")
+				logger.ErrorContext(ctx, "failed to get stats", "error", err)
 				continue
 			}
-			logger.WithFields(logrus.Fields{
-				"total_users": stats.TotalUsers,
-				"total_chats": stats.TotalChats,
-			}).Debug("Stats")
+			logger.DebugContext(ctx, "updating aggregated stats", "total_users", stats.TotalUsers, "total_chats", stats.TotalChats)
 			totalUsers.Set(float64(stats.TotalUsers))
 			totalChats.Set(float64(stats.TotalChats))
 		}

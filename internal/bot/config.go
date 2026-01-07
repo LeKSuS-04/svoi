@@ -19,7 +19,6 @@ type StickerSetConfig struct {
 }
 
 type Config struct {
-	Debug       bool               `env:"DEBUG"`
 	BotToken    string             `env:"BOT_TOKEN"`
 	SqlitePath  string             `yaml:"sqlite_path" env:"SQLITE_PATH"`
 	StickerSets []StickerSetConfig `yaml:"sticker_sets"`

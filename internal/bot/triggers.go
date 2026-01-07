@@ -182,21 +182,19 @@ func (w *worker) makeAIResponse(ctx context.Context, trigger trigger, msg *teleg
 		return w.makeDefaultResponse(trigger), nil
 	}
 
-	log := w.log.WithField("sender_id", msg.From.ID)
-	log.WithField("text", msg.Text).Info("Generating AI response")
+	w.log.InfoContext(ctx, "generating ai response", "text", msg.Text)
 
 	if err := w.cache.Add(aiSenderKey(msg.From.ID), struct{}{}, w.config.AI.ResponseResetPeriod); err != nil {
-		log.WithError(err).Debug("Failed to add to cache")
+		w.log.ErrorContext(ctx, "failed to add to cache", "error", err)
 		return w.makeDefaultResponse(trigger), nil
 	}
 
-	resp, err := w.ai.GeneratePatrioticResponse(ctx, log, msg.Text)
+	resp, err := w.ai.GeneratePatrioticResponse(ctx, msg.Text)
 	if err != nil {
 		w.cache.Delete(aiSenderKey(msg.From.ID))
 		return nil, fmt.Errorf("generate patriotic response: %w", err)
 	}
 
-	log.WithField("response", resp).Info("Generated AI response")
 	return &textResponse{
 		triggerResponseBase: triggerResponseBase{
 			t: trigger, typ: aiGenerated,

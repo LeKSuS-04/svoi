@@ -3,16 +3,17 @@ package bot
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/mymmrac/telego"
 	"github.com/patrickmn/go-cache"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/singleflight"
 
 	"github.com/LeKSuS-04/svoi-bot/internal/ai"
 	"github.com/LeKSuS-04/svoi-bot/internal/db"
+	"github.com/LeKSuS-04/svoi-bot/internal/logging"
 )
 
 type Bot struct {
@@ -23,7 +24,6 @@ type Bot struct {
 	dbPath               string
 
 	api *telego.Bot
-	log *logrus.Logger
 }
 
 func NewBot(config *Config, opts ...Option) (*Bot, error) {
@@ -40,7 +40,6 @@ func NewBot(config *Config, opts ...Option) (*Bot, error) {
 		dbPath:               db.InMemory,
 
 		api: api,
-		log: logrus.StandardLogger(),
 	}
 
 	for _, opt := range opts {
@@ -50,14 +49,15 @@ func NewBot(config *Config, opts ...Option) (*Bot, error) {
 }
 
 func (b *Bot) Run(ctx context.Context) error {
-	b.log.Debug("Running in debug mode")
+	log := logging.New("bot")
+	log.DebugContext(ctx, "running in debug mode")
 
 	cache := cache.New(b.cacheDuration, b.cacheCleanupInterval)
 	workerUpdatesChan := make(chan telego.Update, 1000)
 
 	var aiHandler *ai.AI
 	if b.config.AI.APIKey == "" {
-		b.log.Warn("AI API key is not set, AI responses will be disabled")
+		log.WarnContext(ctx, "AI API key is not set, AI responses will be disabled")
 	} else {
 		aiHandler = ai.NewAI(b.config.AI)
 	}
@@ -88,11 +88,8 @@ func (b *Bot) Run(ctx context.Context) error {
 				cache:          cache,
 				db:             db,
 				ai:             aiHandler,
-				log: b.log.WithFields(logrus.Fields{
-					"component": "worker",
-					"workerID":  workerId,
-				}),
-				updates: workerUpdatesChan,
+				log:            logging.New(fmt.Sprintf("worker-%d", workerId)),
+				updates:        workerUpdatesChan,
 			}
 			w.Work(ctx)
 		}()
@@ -110,7 +107,9 @@ func (b *Bot) Run(ctx context.Context) error {
 		b.runMetricsServer(ctx)
 	}
 
-	b.log.Infof("Listening for updates from bot %q", self.Username)
+	log.InfoContext(ctx, "listening for updates from bot", "username", self.Username)
+	skipQueuedUpdates(ctx, log, newUpdatesChan)
+
 loop:
 	for {
 		select {
@@ -118,25 +117,40 @@ loop:
 			break loop
 
 		case update := <-newUpdatesChan:
-			b.log.WithField("updateId", update.UpdateID).Debug("Received new update")
+			log.DebugContext(ctx, "received new update", "updateId", update.UpdateID)
 			workerUpdatesChan <- update
 		}
 	}
-	b.log.Info("Stopped receiving updates")
+	log.InfoContext(ctx, "stopped receiving updates")
 
-	b.log.Info("Waiting for workers to shut down")
+	log.InfoContext(ctx, "waiting for workers to shut down")
 	wg.Wait()
-	b.log.Info("All workers stopped")
+	log.InfoContext(ctx, "all workers stopped")
 	return nil
 }
 
-type Option = func(*Bot)
+func skipQueuedUpdates(ctx context.Context, log *slog.Logger, newUpdatesChan <-chan telego.Update) {
+	timer := time.NewTimer(time.Second)
+	skippedUpdates := 0
 
-func WithLogger(log *logrus.Logger) Option {
-	return func(b *Bot) {
-		b.log = log
+loop:
+	for {
+		select {
+		case update := <-newUpdatesChan:
+			timer.Reset(500 * time.Millisecond)
+			skippedUpdates++
+			log.DebugContext(ctx, "skipping queued update", "updateId", update.UpdateID)
+		case <-ctx.Done():
+			break loop
+		case <-timer.C:
+			break loop
+		}
 	}
+
+	log.InfoContext(ctx, "skipped queued updates", "count", skippedUpdates)
 }
+
+type Option = func(*Bot)
 
 func WithWorkerCount(workers int) Option {
 	return func(b *Bot) {

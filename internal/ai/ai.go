@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/LeKSuS-04/svoi-bot/internal/logging"
 )
 
 type Config struct {
@@ -25,13 +26,18 @@ type Config struct {
 type AI struct {
 	model string
 	cfg   *Config
+	log   *slog.Logger
 }
 
 func NewAI(config *Config) *AI {
-	return &AI{model: config.Model, cfg: config}
+	return &AI{
+		model: config.Model,
+		cfg:   config,
+		log:   logging.New("ai"),
+	}
 }
 
-func (a *AI) GeneratePatrioticResponse(ctx context.Context, log *logrus.Entry, prompt string) (response string, err error) {
+func (a *AI) GeneratePatrioticResponse(ctx context.Context, prompt string) (response string, err error) {
 	start := time.Now()
 	defer func() {
 		if err != nil {
@@ -57,11 +63,7 @@ func (a *AI) GeneratePatrioticResponse(ctx context.Context, log *logrus.Entry, p
 		return "", fmt.Errorf("marshal request: %w", err)
 	}
 
-	log.WithFields(logrus.Fields{
-		"url":             a.cfg.BaseURL,
-		"model":           a.model,
-		"fallback_models": a.cfg.FallbackModels,
-	}).Debug("Sending request to AI provider")
+	a.log.DebugContext(ctx, "sending request to ai provider", "url", a.cfg.BaseURL, "model", a.model, "fallback_models", a.cfg.FallbackModels)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.cfg.BaseURL, bytes.NewBuffer(jsonReq))
 	if err != nil {
 		return "", fmt.Errorf("new request: %w", err)
@@ -84,10 +86,8 @@ func (a *AI) GeneratePatrioticResponse(ctx context.Context, log *logrus.Entry, p
 	if err := json.NewDecoder(rsp.Body).Decode(&rspModel); err != nil {
 		return "", fmt.Errorf("decode response: %w", err)
 	}
-	log.WithFields(logrus.Fields{
-		"used_model": rspModel.Model,
-		"usage":      rspModel.Usage,
-	}).Info("Received response from AI provider")
+	a.log.DebugContext(ctx, "received response from ai provider", "used_model", rspModel.Model, "usage", rspModel.Usage)
+
 	promptTokens.WithLabelValues(rspModel.Model).Add(float64(rspModel.Usage.PromptTokens))
 	completionTokens.WithLabelValues(rspModel.Model).Add(float64(rspModel.Usage.CompletionTokens))
 	totalTokens.WithLabelValues(rspModel.Model).Add(float64(rspModel.Usage.TotalTokens))
@@ -101,7 +101,9 @@ func (a *AI) GeneratePatrioticResponse(ctx context.Context, log *logrus.Entry, p
 		return "", fmt.Errorf("empty message content")
 	}
 
-	return strings.TrimSpace(choice.Message.Content), nil
+	message := strings.TrimSpace(choice.Message.Content)
+	a.log.DebugContext(ctx, "generated ai response", "response", message)
+	return message, nil
 }
 
 type OpenrouterRequest struct {

@@ -5,10 +5,11 @@ go 1.24.4
 require (
 	github.com/mymmrac/telego v0.30.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
+	github.com/phsym/console-slog v0.3.1
 	github.com/prometheus/client_golang v1.21.1
 	github.com/sethvargo/go-envconfig v1.1.0
-	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/sync v0.15.0
+	golang.org/x/term v0.38.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.30.1
 )
@@ -43,7 +44,7 @@ require (
 	github.com/valyala/fasthttp v1.54.0 // indirect
 	github.com/valyala/fastjson v1.6.4 // indirect
 	golang.org/x/arch v0.6.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
 	google.golang.org/protobuf v1.36.1 // indirect
 	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect
 	modernc.org/libc v1.52.1 // indirect
